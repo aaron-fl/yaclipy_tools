@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "yaclipy-tools"
-description = ''
+description = 'This is a collection of wrappers around common system tools that works well with yaclipy.'
 readme = "README.md"
 requires-python = ">=3.7"
 license = "MIT"
@@ -59,3 +59,12 @@ exclude_lines = [
   "if __name__ == .__main__.:",
   "if TYPE_CHECKING:",
 ]
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+  "/.github",
+  "/docs",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/print_ext"]
