@@ -1,12 +1,17 @@
 # yaclipy-tools
 
-These are a collection of wrappers around common system tools that works with [yaclipy](https://pypi.org/project/yaclipy)
+This is a collection of wrappers around common system tools that works well with [yaclipy](https://pypi.org/project/yaclipy)
 
 ## Tools
 
+* openssl
 * shasum
 * md5
 * gpg
+* nginx
+* grep
+* gpg
+* curl
 
 The set of tools can easily be extended by subclassing SysTool
 

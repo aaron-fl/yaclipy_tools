@@ -38,7 +38,7 @@ def run_parallel(cmd_f, *services, msg=None):
             sys.stdout.write(std_err.decode('utf8'))
 
 
-def run(*args, msg=None, verbose=0, stdin=None, stdout=False, stderr=False, success=[0], shell=False, **kwargs):
+def run(*args, msg=None, verbose=0, stdin=None, stdout=False, stderr=False, success=[0], shell=False, raw=False, **kwargs):
     ''' Run a command.
     
     Parametes:
@@ -86,8 +86,8 @@ def run(*args, msg=None, verbose=0, stdin=None, stdout=False, stderr=False, succ
     while True:
         try:
             out = proc.communicate(timeout=timeout, input=stdin)
-            sout = (out[0] or bytes()).decode('utf8').splitlines()
-            serr = (out[1] or bytes()).decode('utf8').splitlines()
+            sout = [out[0]] if stdout=='raw' else (out[0] or bytes()).decode('utf8').splitlines()
+            serr = [out[1]] if stderr=='raw' else (out[1] or bytes()).decode('utf8').splitlines()
             break
         except TimeoutExpiredTimeoutExpired:
             timeout = 0.2
@@ -97,6 +97,8 @@ def run(*args, msg=None, verbose=0, stdin=None, stdout=False, stderr=False, succ
     if isinstance(success, int): success = [success]
     if proc.returncode in success:
         if not stdout and not stderr: return proc.returncode
+        if stdout == 'raw': return sout[0]
+        if stderr == 'raw': return sout[1]
         return iter((sout if stdout else []) + (serr if stderr else []))
     if 'or_else' in kwargs:
         return kwargs['or_else']
