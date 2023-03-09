@@ -1,23 +1,24 @@
-import os, sys, logging
+import os
 from print_ext import PrettyException, Text
-from subprocess import run, Popen, PIPE
-from .run import CmdNotFound
-
-log = logging.getLogger('syscmd')
+from .run import run, CmdNotFound
+from .singleton import Singleton
 
 class MissingTool(PrettyException): pass
 
 
-class Singleton(type):
-    def __call__(cls, *args):
-        if not hasattr(cls, '_instances'): cls._instances = {}
-        if args not in cls._instances:
-            cls._instances[args] = super(Singleton, cls).__call__(*args)
-        return cls._instances[args]
-
 
 class SysTool(metaclass=Singleton):
-    def __init__(self, version='0'):
+
+    @classmethod
+    def version(self):
+        return ''
+
+    @classmethod
+    def install_help(self, t):
+        return t
+        
+    @classmethod
+    def init_once(self, version='0'):
         try:
             got = self.version()
         except CmdNotFound:
@@ -32,12 +33,16 @@ class SysTool(metaclass=Singleton):
             else:
                 t(f"\vVersion \b2 {got}\b  was found.")
             raise MissingTool(msg=self.install_help(t))
+
+
+    def __init__(self, verbose=0):
+        self.verbose = verbose
         
 
-    def version(self):
-        return ''
-
-
-    def install_help(self, t):
-        return t
-        
+    def run(self, *args, **kwargs):
+        try:
+            verbose = self.verbose
+        except AttributeError: # self might be a class calling version()
+            verbose = 0
+        kwargs.setdefault('verbose', verbose)
+        return run(self.cmd(), *args, **kwargs)

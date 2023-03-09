@@ -8,7 +8,7 @@ def test_run_exception():
     except CmdRunError as e:
         o, p = printer(ascii=True)
         p.pretty(e)
-        assert(o.getvalue() == 'std\nout\nstderr\n\n-[ CmdRunError ]-\n\n $ tests/echo.py 3 std\\x0aout stderr\\x0a\n -> 3\n\n')
+        assert(o.getvalue() == '-[ Captured stdout call ]-\n\nstd\nout\n-[ Captured stderr call ]-\n\nstderr\n\n\n-[ CmdRunError ]-\n\n $ tests/echo.py 3 std\\x0aout stderr\\x0a\n -> 3\n\n')
 
 
 def test_run_noexception_stdout():
@@ -31,7 +31,7 @@ def test_run_notfound():
     except CmdNotFound as e:
         o, p = printer(ascii=True)
         p.pretty(e)
-        assert(o.getvalue() == "[Errno 2] No such file or directory: 'tests/ecfsdho.py'\n-[ CmdNotFound ]-\n\n $ tests/ecfsdho.py 3 stdout stderr\n -> Command not found.\n\n")
+        assert(o.getvalue() == "-[ Captured stderr call ]-\n\n[Errno 2] No such file or directory: 'tests/ecfsdho.py'\n\n-[ CmdNotFound ]-\n\n $ tests/ecfsdho.py 3 stdout stderr\n -> Command not found.\n\n")
 
 
 

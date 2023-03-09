@@ -1,20 +1,22 @@
 from print_ext import print, PrettyException, Text, HR
-import asyncio, subprocess, time
-
+import asyncio, time
+from subprocess import Popen, PIPE, STDOUT, TimeoutExpired
 
 class CmdRunError(PrettyException):
     def pretty(self, verbose=9, **kwargs):
         raw = type('raw',(object,), {'__str__':lambda self: self.m, '__init__': lambda self,x: setattr(self,'m',x)})
         f = Text()
+        if self.stdout: f(HR('Captured stdout call', style='1'),'\v\v')
         for s in self.stdout:
             f(raw(s), '\v')
+        if self.stderr: f(HR('Captured stderr call', style='1'),'\v\v')
         for s in self.stderr:
-            f(raw(s),'\v', style='err')
-        f(HR(self.__class__.__name__, style='err'), '\v\v')
+            f(raw(s),'\v')
+        f('\v',HR(self.__class__.__name__, style='err'), '\v\v')
         if self.msg: f(*self.msg,'\v\v')
         f(' $ ', raw(self.cmd), '\v')
-        f('\berr$  -> ')
-        f('Command not found.' if self.returncode == None else self.returncode)
+        f(' -> ')
+        f('Command not found.' if self.returncode == None else self.returncode, style='err')
         return f('\v')
 
 
@@ -34,26 +36,6 @@ def run_parallel(cmd_f, *services, msg=None):
         if proc.returncode:
             print(f"Command failed for {svc}: ", ' '.join(cmd))
             sys.stdout.write(std_err.decode('utf8'))
-
-
-
-
-async def arun(cmd, stdout=None, stderr=None, stdin=None):
-    stdin, stdout, stderr = None, asyncio.subprocess.PIPE, asyncio.subprocess.STDOUT
-
-    proc = await asyncio.create_subprocess_exec(prog, *args, stdin, stdout, stderr)
-    
-
-    stdout, stderr = await proc.communicate()
-
-    print(f'[{cmd!r} exited with {proc.returncode}]')
-    if stdout:
-        print(f'[stdout]\n{stdout.decode()}')
-    if stderr:
-        print(f'[stderr]\n{stderr.decode()}')
-
-    asyncio.run(run('ls /zzz'))
-
 
 
 def run(*args, msg=None, verbose=0, stdin=None, stdout=False, stderr=False, success=[0], shell=False, **kwargs):
@@ -80,7 +62,7 @@ def run(*args, msg=None, verbose=0, stdin=None, stdout=False, stderr=False, succ
             if the returncode does not match
     '''
     if not isinstance(msg, tuple): msg = None if msg==None else tuple(msg)
-    cmd = args[0] if len(args) == 1 else args
+    cmd = list(map(str, args[0] if len(args) == 1 else args))
     cmd_str = cmd if isinstance(cmd, str) else ' '.join((f'"{c}"' if ' ' in c else c) for c in cmd)
     if not shell and isinstance(cmd, str): cmd = cmd.split(' ')
     # Show some stuff
@@ -90,10 +72,10 @@ def run(*args, msg=None, verbose=0, stdin=None, stdout=False, stderr=False, succ
         print(*msg)
     # Try to Popen
     try:
-        proc = subprocess.Popen(cmd,
-            stdout = None if not stdout and verbose >= 3 else subprocess.PIPE,
-            stderr = None if not stderr and verbose >= 3 else subprocess.PIPE,
-            stdin = subprocess.PIPE if stdin else None,
+        proc = Popen(cmd,
+            stdout = None if not stdout and verbose >= 3 else PIPE,
+            stderr = None if not stderr and verbose >= 3 else PIPE,
+            stdin = PIPE if stdin else None,
             shell=shell, **{k:v for k,v in kwargs.items() if k not in ['or_else']})
     except Exception as e:
         raise CmdNotFound(cmd=cmd_str, stderr=[f'{e}'], stdout=[], msg=msg, returncode=None)
@@ -107,7 +89,7 @@ def run(*args, msg=None, verbose=0, stdin=None, stdout=False, stderr=False, succ
             sout = (out[0] or bytes()).decode('utf8').splitlines()
             serr = (out[1] or bytes()).decode('utf8').splitlines()
             break
-        except subprocess.TimeoutExpired:
+        except TimeoutExpiredTimeoutExpired:
             timeout = 0.2
             spin(f"{time.time() - t0:.1f}")
     if verbose >= 1: spin(f' -> {proc.returncode}',done=True)
@@ -119,4 +101,3 @@ def run(*args, msg=None, verbose=0, stdin=None, stdout=False, stderr=False, succ
     if 'or_else' in kwargs:
         return kwargs['or_else']
     raise CmdRunError(cmd=cmd_str, stdout=sout, stderr=serr, msg=msg, returncode=proc.returncode)
-

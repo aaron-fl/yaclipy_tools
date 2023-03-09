@@ -6,22 +6,27 @@ from .testutil import printer
 
 
 class MyTool(SysTool):
+    @classmethod
+    def init_once(self, *args):
+        print(f"MY TOOL init_once {args}")
+        super().init_once(*args)
+
+    @classmethod
     def version(self):
         return '1.4.3'
+    
+    def __init__(self, **kwargs):
+        self.kwargs = kwargs
+
 
 class OtherTool(SysTool):
+    @classmethod
     def version(self):
         return '3.5'
 
-def test_systool_singleton():
-    t = OtherTool("1")
-    t2 = MyTool("1")
-    t3 = MyTool("1")
-    t4 = MyTool("1.2")
-    assert(t != t2)
-    assert(t2 == t3)
-    assert(t2 != t4)
-    assert(len(MyTool._instances) == 2)
+    def __init__(self, **kwargs):
+        self.kwargs = kwargs
+
 
 
 def test_systool_exception():
@@ -38,3 +43,12 @@ def test_systool_exception():
         p.pretty(e)
         assert('1.5.0' in o.getvalue())
         
+
+if __name__ == '__main__':
+    m1 = MyTool('1', verbose=2)
+    assert(m1.kwargs['verbose'] == 3)
+    #m2 = MyTool('2', verbose=2)
+    #m3 = MyTool('1', verbose=3)
+    #o2 = OtherTool('2', verbose=2)
+    #print(id(m1), id(m2), id(m3), id(o2))
+
