@@ -39,7 +39,7 @@ class SysTool(metaclass=Singleton):
         self.verbose = verbose
         
 
-    def run(self, *args, **kwargs):
+    def __call__(self, *args, **kwargs):
         try:
             verbose = self.verbose
         except AttributeError: # self might be a class calling version()

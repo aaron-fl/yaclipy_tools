@@ -15,7 +15,7 @@ class GPG(SysTool):
 
     @classmethod
     def version(self):
-        for line in self.run(self, '--version', stdout=True):
+        for line in self.__call__(self, '--version', stdout=True):
             return line.split(' ')[-1]
     
     
@@ -31,7 +31,7 @@ class GPG(SysTool):
 
     def import_key(self, fname):
         key_id = ''
-        for line in self.run('--with-colons','--import-options','show-only','--keyid-format','long','--import',fname, stdout=True, msg="Finding keys", or_else=[]):
+        for line in self('--with-colons','--import-options','show-only','--keyid-format','long','--import',fname, stdout=True, msg="Finding keys", or_else=[]):
             if line.startswith('pub'):
                 key_id = line.split(':')[4]
             if line.startswith('uid'):
@@ -39,19 +39,19 @@ class GPG(SysTool):
                 usr_hash = line[7]
                 usr_name = line[9]
         if key_id == '': return None
-        if self.run('--list-keys', key_id, or_else=True):
-            self.run('--import',fname, msg=f'Importing key for user: \b1 {usr_name}')
-        me = not self.run('--list-secret-keys', key_id, or_else=True)
+        if self('--list-keys', key_id, or_else=True):
+            self('--import',fname, msg=f'Importing key for user: \b1 {usr_name}')
+        me = not self('--list-secret-keys', key_id, or_else=True)
         name, email = NAME_RE.match(usr_name).groups()
         return User(name=name.strip(), email=email, me=me, key=key_id)
 
 
     def export_key(self, email, fname):
-        self.run('--yes','--armor','--output',fname,'--export',email, msg="Exporting key")
+        self('--yes','--armor','--output',fname,'--export',email, msg="Exporting key")
     
  
     def list_users(self):
-        for line in self.run('-K','--with-colons', stdout=True, msg="List Users"):
+        for line in self('-K','--with-colons', stdout=True, msg="List Users"):
             if line.startswith('uid'):
                 line = line.split(':')
                 name, email = NAME_RE.match(line[9]).groups()
@@ -59,4 +59,4 @@ class GPG(SysTool):
     
 
     def genkey(self):
-        self.run('--full-generate-key')
+        self('--full-generate-key')

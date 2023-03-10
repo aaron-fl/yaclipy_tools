@@ -15,7 +15,7 @@ class Nginx(SysTool):
     
     @classmethod
     def version(self):
-        for line in self.run(self, '-v', stderr=True):
+        for line in self.__call__(self, '-v', stderr=True):
             return line.rsplit('/',1)[1]
 
 
@@ -96,8 +96,8 @@ class Nginx(SysTool):
             f.write(''.join(clean(self.cfg_tree)))
         if not self['cert'].is_file():
             log.warning(f"No certificate file {self['cert']}: https disabled.")
-        self.run('-c', self['prefix']/'nginx.conf', '-p', os.path.abspath('.'), '-e', self['prefix']/'error.log')
+        self('-c', self['prefix']/'nginx.conf', '-p', os.path.abspath('.'), '-e', self['prefix']/'error.log')
 
 
     def stop(self):
-        self.run('-s', 'stop', '-c', self['prefix']/'nginx.conf', '-p', os.path.abspath('.'))
+        self('-s', 'stop', '-c', self['prefix']/'nginx.conf', '-p', os.path.abspath('.'))

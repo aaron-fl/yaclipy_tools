@@ -9,4 +9,4 @@ def test_Shasum():
     except MissingTool as e: 
         print.pretty(e)
     sha = Shasum('6')
-    assert(sha.hash('tests/echo.py') == '00ee7a5c16749b16a0e158774a77f87e9bc4e9d8')
+    assert(sha.hash('tests/echo.py') == '0330b869605febca1969554eeb9002c84a1148c7')

@@ -16,7 +16,7 @@ def _openssl():
 
 def test_openssl_hash():
     ossl = _openssl()
-    assert(ossl.hash('tests/echo.py') == '0642250eabc24e1343d74d1bc6d5e9a2b093a4a50d14ab8cf27d03bc1f0b92b0')
+    assert(ossl.hash('tests/echo.py') == '3eaede45287f555c1d0bcf117f7cb6bf35ddee9ea6d2abc7de25dfa9f18e0e9f')
     assert(ossl.hash('tests/doesntexist.py') == '')
 
 

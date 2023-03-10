@@ -72,14 +72,14 @@ class Grep(SysTool):
 
     @classmethod
     def version(self):
-        for line in self.run(self, '--version', stdout=True):
+        for line in self.__call__(self, '--version', stdout=True):
             return line.rsplit(' ',1)[1].split('-')[0]
     
 
     def files_search(self, files, pattern, *args):
         if not files: return ''
         cmd = ['--color=never'] + list(args) + [pattern] + files
-        return self.run(*cmd, stdout=True)
+        return self(*cmd, stdout=True)
 
 
     def group_search(self, groups, pattern, *args):

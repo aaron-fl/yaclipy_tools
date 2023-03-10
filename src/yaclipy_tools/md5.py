@@ -8,8 +8,8 @@ class Md5(SysTool):
 
     @classmethod
     def version(self):
-        return str(self.run(self, '-x', or_else=''))
+        return str(self.__call__(self, '-x', or_else=''))
 
     def hash(self, file):
-        for line in self.run(file, stdout=True):
+        for line in self(file, stdout=True):
             return line.split(' ')[-1]

@@ -8,7 +8,7 @@ class FFmpeg(SysTool):
 
     @classmethod
     def version(self):
-        for line in self.run(self, '-version', stdout=True):
+        for line in self.__call__(self, '-version', stdout=True):
             return line.split(' ')[2]
 
 
@@ -27,12 +27,12 @@ class FFmpeg(SysTool):
 
 
     def process(self, infile, outfile, *args, **kwargs):
-        return self.run('-y', '-i', infile, *args, outfile, **kwargs)
+        return self('-y', '-i', infile, *args, outfile, **kwargs)
 
 
     def info(self, infile, *args, **kwargs):
         info = {}
-        for line in self.run('-i', infile, '-hide_banner', success=[0,1], stderr=True):
+        for line in self('-i', infile, '-hide_banner', success=[0,1], stderr=True):
             if 'no such file' in line.lower(): return None
             if m:=self.DUR_RE.search(line):
                 info['dur'] = int(m[1])*3600 + int(m[2])*60 + float(m[3])

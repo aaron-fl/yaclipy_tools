@@ -10,12 +10,12 @@ def _write_file(git, fname, contents):
 def _setup_remote(tmp_path):
     (tmp_path/'remote').mkdir()
     git = Git(repo=tmp_path/'remote', verbose=4)
-    git.run('init')
+    git('init')
     _write_file(git, 'f1', 'f1 says hi')
-    git.run('add', tmp_path/'remote/f1')
-    git.run('commit', '-am', '1st')
-    git.run('branch','-m','main')
-    git.run('checkout','-b','other')
+    git('add', tmp_path/'remote/f1')
+    git('commit', '-am', '1st')
+    git('branch','-m','main')
+    git('checkout','-b','other')
     return git
 
 def _setup(tmp_path):
@@ -30,13 +30,13 @@ def _setup(tmp_path):
 def test_orphan(tmp_path):
     remote, oph1, oph2 = _setup(tmp_path)
     _write_file(oph1.git, 'f2', 'f2 contents')
-    oph1.git.run('add', '.')
-    oph1.git.run('commit', '-am', 'f2')
+    oph1.git('add', '.')
+    oph1.git('commit', '-am', 'f2')
     _write_file(oph1.git, 'f3', 'f2 contents')
     _write_file(oph1.git, 'f2', 'change it')
     print.pretty(oph1.git.status())
-    oph1.ensure()
-    
+    oph1.initialize()
+
 
     assert(False)
     

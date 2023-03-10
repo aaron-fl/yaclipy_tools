@@ -7,10 +7,10 @@ class Shasum(SysTool):
 
     @classmethod
     def version(self):
-        for line in self.run(self, '--version', stdout=True):
+        for line in self.__call__(self, '--version', stdout=True):
             return line
         
         
     def hash(self, file):
-        for line in self.run(file, stdout=True):
+        for line in self(file, stdout=True):
             return line.split(' ')[0]

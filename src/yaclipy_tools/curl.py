@@ -8,7 +8,7 @@ class Curl(SysTool):
 
     @classmethod
     def version(self):
-        for line in self.run(self, '--version', stdout=True):
+        for line in self.__call__(self, '--version', stdout=True):
             return line.split(' ')[1]
 
 
@@ -20,6 +20,6 @@ class Curl(SysTool):
                 Save the file here.  Otherwise, if fname is None, yield each downloaded line.
         '''
         if fname:
-            self.run(url, '-o', fname)
+            self(url, '-o', fname)
         else:
-            return self.run(url, stdout=True)
+            return self(url, stdout=True)
