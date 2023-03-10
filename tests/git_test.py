@@ -3,7 +3,7 @@ from yaclipy_tools.run import CmdRunError
 from yaclipy_tools.git import Git
 
 def test_git():
-    git = Git()
+    git = Git('2.30')
     assert(git.name == 'yaclipy_tools')
     assert(len(git.current_commit()) == 40)
     assert(git.current_branch() == 'main')

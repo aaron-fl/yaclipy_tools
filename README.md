@@ -12,6 +12,9 @@ This is a collection of wrappers around common system tools that works well with
 * grep
 * gpg
 * curl
+* ffmpeg
+* git
+
 
 The set of tools can easily be extended by subclassing SysTool
 

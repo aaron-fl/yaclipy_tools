@@ -35,7 +35,7 @@ class SysTool(metaclass=Singleton):
             raise MissingTool(msg=self.install_help(t))
 
 
-    def __init__(self, verbose=0):
+    def __init__(self, verbose=0, **kwargs):
         self.verbose = verbose
         
 

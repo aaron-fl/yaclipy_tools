@@ -9,45 +9,50 @@ class Git(SysTool):
 
     @classmethod
     def version(self):
-        for line in self.run(self, '--version', stdout=True):
+        for line in super().run(self, '--version', stdout=True):
             return line.split(' ')[2]
 
 
-    def __init__(self, repo='.'):
+    def __init__(self, repo='.', **kwargs):
         self.repo = Path(repo)
+        super().__init__(**kwargs)
 
 
     def __bool__(self):
         return bool(self.name)
 
 
+    def run(self, *args, **kwargs):
+        return super().run('-C', self.repo, *args, **kwargs)
+
+
     @property
     def name(self):
         if not hasattr(self, '_name'):
-            l = list(self.run('-C', self.repo, 'config', '--get', 'remote.origin.url', stdout=True, msg=f'{self.repo}: Origin', or_else=['']))[0]
+            l = list(self.run('config', '--get', 'remote.origin.url', stdout=True, msg=f'{self.repo}: Origin', or_else=['']))[0]
             if not l:
-                l = lines(self.run('-C',self.repo,'rev-parse','--show-toplevel', stdout=True, msg=f'{self.repo}: Name', or_else=['']))[0]
+                l = lines(self.run('rev-parse','--show-toplevel', stdout=True, msg=f'{self.repo}: Name', or_else=['']))[0]
             self._name = os.path.splitext(os.path.basename(l))[0]
         return self._name
 
 
     def current_commit(self):
-        return list(self.run('-C',self.repo,'rev-parse','HEAD', msg=f'{self.repo}: Current commit', stdout=True))[0]
+        return list(self.run('rev-parse','HEAD', msg=f'{self.repo}: Current commit', stdout=True))[0]
 
 
     def status(self, changes_only=False):
-        changes = [x for x in self.run('-C', self.repo, 'status', '-z', stdout='raw', msg=f'{self.repo}: Status').decode('utf8').split('\0') if x]
+        changes = [x for x in self.run('status', '-z', stdout='raw', msg=f'{self.repo}: Status').decode('utf8').split('\0') if x]
         changes = [(k[:2],k[3:]) for k in changes]
         if changes or changes_only: return changes
-        if list(self.run('-C', self.repo, 'fetch', '--dry-run', stdout=True, msg=f'{self.repo}: Check pull')):
+        if list(self.run('fetch', '--dry-run', stdout=True, msg=f'{self.repo}: Check pull')):
             return [('  ','Need to pull')]
-        if list(self.run('-C', self.repo, 'status', '-sb', stdout=True, msg=f'{self.repo}: Check push'))[0].split('[')[-1].startswith('ahead'):
+        if list(self.run('status', '-sb', stdout=True, msg=f'{self.repo}: Check push'))[0].split('[')[-1].startswith('ahead'):
             return [('  ','Need to push')] 
         return []
 
 
     def current_branch(self):
-        return list(self.run('-C', self.repo, 'symbolic-ref', '--short', 'HEAD', stdout=True, msg=f'{self.repo}: Branch'))[0]
+        return list(self.run('symbolic-ref', '--short', 'HEAD', stdout=True, msg=f'{self.repo}: Branch'))[0]
 
 
     def up_to_date(self):
@@ -55,15 +60,15 @@ class Git(SysTool):
 
 
     def list(self, *pattern, invert=False):
-        return self.run('-C', self.repo, 'ls-files', *pattern, *(['--other'] if invert else []), stdout=True, msg=f'{self.repo}: List')
+        return self.run('ls-files', *pattern, *(['--other'] if invert else []), stdout=True, msg=f'{self.repo}: List')
 
 
     def pull_rebase(self, *args):
-        self.run('-C', self.repo, 'pull', '--rebase', *args)
+        self.run('pull', '--rebase', *args)
 
 
     def push(self, *args, force=False):
-        self.run('-C', self.repo, 'push', *(['--force-with-lease'] if force else []), *args)
+        self.run('push', *(['--force-with-lease'] if force else []), *args)
 
 
 
@@ -82,7 +87,7 @@ def status(repo):
     else: print(Text(CLR.lg, 'Up to date', CLR.x))
 
 
-def rebase_ff(base, ontop, *, repo='.'):
+def rebase_ff(base, ontop, *, repo='.', verbose__v=False):
     ''' Rebase and then ff merge.  New commits from `ontop` will be applied to `base`.
 
     Parameters:
@@ -93,6 +98,7 @@ def rebase_ff(base, ontop, *, repo='.'):
         --repo <path>
             The repository to work on ('.' by default).
     '''
-    self.run('-C', repo, 'rebase', base, ontop)
-    self.run('-C', repo, 'switch', base)
-    self.run('-C', repo, 'merge', '--ff-only', ontop)
+    git = Git(repo=repo, verbose=int(verbose__v))
+    git.run('rebase', base, ontop)
+    git.run('switch', base)
+    git.run('merge', '--ff-only', ontop)
