@@ -9,7 +9,7 @@ class OrphanBranch():
 
     
     def ensure(self):
-        self.git('worktree', 'add', self.local, self.remote, msg=f"Creating {self.local} worktree")
+        self.git.run('worktree', 'add', self.local, self.remote, msg=f"Creating {self.local} worktree")
 
 
 
