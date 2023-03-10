@@ -31,7 +31,7 @@ class Git(SysTool):
         if not hasattr(self, '_name'):
             l = list(self('config', '--get', 'remote.origin.url', stdout=True, msg=f'{self.repo}: Origin', or_else=['']))[0]
             if not l:
-                l = lines(self('rev-parse','--show-toplevel', stdout=True, msg=f'{self.repo}: Name', or_else=['']))[0]
+                l = list(self('rev-parse','--show-toplevel', stdout=True, msg=f'{self.repo}: Name', or_else=['']))[0]
             self._name = os.path.splitext(os.path.basename(l))[0]
         return self._name
 

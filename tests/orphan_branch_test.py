@@ -14,29 +14,39 @@ def _setup_remote(tmp_path):
     _write_file(git, 'f1', 'f1 says hi')
     git('add', tmp_path/'remote/f1')
     git('commit', '-am', '1st')
+    _write_file(git, 'abc', 'abcd')
+    git('add', 'abc')
+    git('commit', '-am', '2nd')
     git('branch','-m','main')
     git('checkout','-b','other')
     return git
 
-def _setup(tmp_path):
-    remote = _setup_remote(tmp_path)
-    run('git', 'clone', tmp_path/'remote', tmp_path/'clone1', verbose=4)
-    run('git', 'clone', tmp_path/'remote', tmp_path/'clone2', verbose=4)
-    oph1 = OrphanBranch(local=tmp_path/'clone1'/'static', remote=tmp_path/'remote'/'rstatic', repo=tmp_path/'clone1', verbose=4)
-    oph2 = OrphanBranch(local=tmp_path/'clone1'/'static', remote=tmp_path/'remote'/'rstatic', repo=tmp_path/'clone1', verbose=4)
-    return remote, oph1, oph2
 
 
 def test_orphan(tmp_path):
-    remote, oph1, oph2 = _setup(tmp_path)
+    remote = _setup_remote(tmp_path)
+    run('git', 'clone', '-b','main', tmp_path/'remote', tmp_path/'clone1', verbose=4)
+    oph1 = OrphanBranch('static', repo=tmp_path/'clone1', verbose=4)
+
     _write_file(oph1.git, 'f2', 'f2 contents')
     oph1.git('add', '.')
     oph1.git('commit', '-am', 'f2')
     _write_file(oph1.git, 'f3', 'f2 contents')
     _write_file(oph1.git, 'f2', 'change it')
+    with (oph1.git.repo/'f2').open() as f:
+        assert(f.read() == 'f2 contentschange it')
     print.pretty(oph1.git.status())
-    oph1.initialize()
+    #(oph1.git.repo/'static').mkdir()
+    oph1.ensure()
+    with (oph1.git.repo/'f2').open() as f:
+        assert(f.read() == 'f2 contentschange it')
 
-
-    assert(False)
+    # Now clone when static already exists
+    print("\v\v\v\v\vORPHAN 2\v\v\v")
+    run('git', 'clone', '-b','main', tmp_path/'remote', tmp_path/'clone2', verbose=4)
+    oph2 = OrphanBranch('static', checkout_path='local/tmp/static', repo=tmp_path/'clone2', verbose=4)
+    assert( not (oph2.git.repo/'local/tmp/static/.gitignore').is_file())
+    oph2.ensure()
+    assert( (oph2.git.repo/'local/tmp/static/.gitignore').is_file())
     
+
