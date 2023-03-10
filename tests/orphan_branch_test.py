@@ -1,9 +1,11 @@
-from print_ext import print
+from print_ext import print, pretty
 from yaclipy_tools.git import Git
 from yaclipy_tools.run import run
-from yaclipy_tools.orphan_branch import OrphanBranch
+from yaclipy_tools.orphan_branch import OrphanBranch, FStat
 
-def _write_file(git, fname, contents):
+def _write_file(git, fname, contents=None):
+    contents = contents or f"Contents of {fname}"
+    (git.repo/fname).parent.mkdir(exist_ok=True)
     with (git.repo/fname).open('a') as f:
         f.write(contents)
 
@@ -50,3 +52,27 @@ def test_orphan(tmp_path):
     assert( (oph2.git.repo/'local/tmp/static/.gitignore').is_file())
     
 
+
+
+def test_orphan_files(tmp_path):
+    remote = _setup_remote(tmp_path)
+    run('git', 'clone', '-b','main', tmp_path/'remote', tmp_path/'clone1', verbose=4)
+    oph1 = OrphanBranch('static', repo=tmp_path/'clone1', verbose=4)
+    oph1.ensure()
+    print('\v\v\v\v\v\v\v')
+    _write_file(oph1.branch_git, '.gitignore', '*.gpg')
+    _write_file(oph1.branch_git, 'afile.py')
+    _write_file(oph1.branch_git, 'bfile.py')
+    _write_file(oph1.branch_git, 'afix/jim.txt.gpg')
+    oph1.branch_git('status')
+    oph1.branch_git('add', '.')
+    oph1.branch_git('commit', '-am', '3rd')
+    _write_file(oph1.branch_git, 'afox.txt')
+    oph1.branch_git('add', '.')
+    _write_file(oph1.branch_git, 'afix/tim.png')
+    (oph1.branch_git.repo/'bfile.py').unlink()
+    for f in sorted(oph1.files()):
+        print(f.flags, pretty(f))
+    assert([(str(f.fname),f.flags) for f in sorted(oph1.files())] == [('afix/jim.txt.gpg',FStat.NONE), ('.gitignore',FStat.TRACKED), ('afile.py', FStat.TRACKED), ('afox.txt',FStat.TRACKED), ('bfile.py',FStat.TRACKED|FStat.REM)])
+
+    

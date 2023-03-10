@@ -1,7 +1,8 @@
-import sys, os
+import sys, os, enum
 from pathlib import Path
 from .sys_tool import SysTool
 from .config import Config
+
 
 
 class Git(SysTool):
@@ -40,14 +41,14 @@ class Git(SysTool):
         return list(self('rev-parse','HEAD', msg=f'{self.repo}: Current commit', stdout=True))[0]
 
 
-    def status(self, changes_only=False):
-        changes = [x for x in self('status', '-z', stdout='raw', msg=f'{self.repo}: Status').decode('utf8').split('\0') if x]
-        changes = [(k[:2],k[3:]) for k in changes]
+    def status(self, *args, changes_only=False):
+        changes = [x for x in self('status', '-z', *args, stdout='raw', msg=f'{self.repo}: Status').decode('utf8').split('\0') if x]
+        changes = [(k[:2],Path(k[3:])) for k in changes]
         if changes or changes_only: return changes
         if list(self('fetch', '--dry-run', stdout=True, msg=f'{self.repo}: Check pull')):
-            return [('  ','Need to pull')]
+            return [('; ','Need to pull')]
         if list(self('status', '-sb', stdout=True, msg=f'{self.repo}: Check push'))[0].split('[')[-1].startswith('ahead'):
-            return [('  ','Need to push')] 
+            return [(': ','Need to push')] 
         return []
 
 
@@ -60,7 +61,8 @@ class Git(SysTool):
 
 
     def list(self, *pattern, invert=False):
-        return self('ls-files', *pattern, *(['--other'] if invert else []), stdout=True, msg=f'{self.repo}: List')
+        for p in self('ls-files', *pattern, *(['--other'] if invert else []), stdout=True, msg=f'{self.repo}: List'):
+            yield Path(p)
 
 
     def pull_rebase(self, *args):
@@ -71,20 +73,6 @@ class Git(SysTool):
         self('push', *(['--force-with-lease'] if force else []), *args)
 
 
-
-def status(repo):
-    ''' git status
-
-    Parameters:
-        <repo>, --repo
-            ~parent~
-    '''
-    g = Git(repo)
-    status = g.status()
-    print(Text(CLR.m, g.current_branch(), CLR.x))
-    if status:
-        print(*[f'{s} {f}' for s,f in status])
-    else: print(Text(CLR.lg, 'Up to date', CLR.x))
 
 
 def rebase_ff(base, ontop, *, repo='.', verbose__v=False):
