@@ -178,5 +178,13 @@ class OrphanBranch():
         if not force and (deleted:=[f for f in self.files() if FStat.REM in f]):
             raise DeletedFiles(deleted=deleted)
         self.branch_git('add','-A')
-        self.branch_git('commit', '-am', 'orphan')
+        self.branch_git('commit', '-am', 'orphan', success=[0,1])
+
+
+    def push(self):
+        self.branch_git('push', '--force-with-lease')
+
+    
+    def pull(self):
+        self.branch_git('pull', '--rebase')
 

@@ -65,14 +65,6 @@ class Git(SysTool):
             yield Path(p)
 
 
-    def pull_rebase(self, *args):
-        self('pull', '--rebase', *args)
-
-
-    def push(self, *args, force=False):
-        self('push', *(['--force-with-lease'] if force else []), *args)
-
-
 
 
 def rebase_ff(base, ontop, *, repo='.', verbose__v=False):
