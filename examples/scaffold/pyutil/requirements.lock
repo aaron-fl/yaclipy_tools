@@ -1,0 +1,5 @@
+docstring-parser==0.15
+print-ext==0.11.1
+PyYAML==6.0
+wcwidth==0.2.6
+-e git+https://github.com/aaron-fl/yaclipy@3fef4fbdaf38256e406ee8f9cf6c85639812adb1#egg=yaclipy
