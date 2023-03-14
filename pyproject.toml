@@ -67,4 +67,4 @@ exclude = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/print_ext"]
+packages = ["src/yaclipy_tools"]
