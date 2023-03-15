@@ -30,7 +30,7 @@ class OpenSSL(SysTool):
         prefix = str(prefix)
         if not force and os.path.exists(prefix+'.pem'):
             self.cert_show(prefix, '-text')
-            raise CertificateExists(msg = (f"Certificate exists: \b1 {prefix+'.pem'}", "\vUse `--force` to overwrite"))
+            raise CertificateExists(msg=f"Certificate exists: \b1 {prefix+'.pem'}\b \nUse `--force` to overwrite")
         os.makedirs(os.path.split(prefix)[0], exist_ok=True)
         subj=f'/O=yaclipy-tools/CN={cn}'
         #subjcn = ''.join([f'/CN={cn}' for cn in cn if '*' not in cn])

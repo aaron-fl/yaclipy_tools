@@ -1,23 +1,22 @@
-from print_ext import print, PrettyException, Text, HR
+from print_ext import print, PrettyException, Printer
 import asyncio, time
 from subprocess import Popen, PIPE, STDOUT, TimeoutExpired
 
 class CmdRunError(PrettyException):
     def pretty(self, verbose=9, **kwargs):
+        p = Printer()
         raw = type('raw',(object,), {'__str__':lambda self: self.m, '__init__': lambda self,x: setattr(self,'m',x)})
-        f = Text()
-        if self.stdout: f(HR('Captured stdout call', style='1'),'\v\v')
+        if self.stdout: p.hr('Captured stdout call', style='1', pad=1)
         for s in self.stdout:
-            f(raw(s), '\v')
-        if self.stderr: f(HR('Captured stderr call', style='1'),'\v\v')
+            p(raw(s))
+        if self.stderr: p.hr('Captured stderr call', style='1', pad=1)
         for s in self.stderr:
-            f(raw(s),'\v')
-        f('\v',HR(self.__class__.__name__, style='err'), '\v\v')
-        if self.msg: f(*self.msg,'\v\v')
-        f(' $ ', raw(self.cmd), '\v')
-        f(' -> ')
-        f('Command not found.' if self.returncode == None else self.returncode, style='err')
-        return f('\v')
+            p(raw(s))
+        p.hr(self.__class__.__name__, style='err', pad=1)
+        if hasattr(self, 'msg') and self.msg: p(self.msg, pad=1)
+        p(' $ ', raw(self.cmd))
+        return p(' -> ', '\berr$', 'Command not found.' if self.returncode == None else self.returncode, pad=(0,1))
+
 
 
 class CmdNotFound(CmdRunError): pass
@@ -85,6 +84,7 @@ def run(*args, msg=None, verbose=0, stdin=None, stdout=False, stderr=False, succ
     timeout = 1.0 if verbose in [1,2] else None
     while True:
         try:
+            if stdin!=None and not isinstance(stdin,bytes): stdin = stdin.encode('utf8')
             out = proc.communicate(timeout=timeout, input=stdin)
             sout = [out[0]] if stdout=='raw' else (out[0] or bytes()).decode('utf8').splitlines()
             serr = [out[1]] if stderr=='raw' else (out[1] or bytes()).decode('utf8').splitlines()

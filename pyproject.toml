@@ -23,7 +23,7 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: CPython",
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
-dependencies = ["yaclipy>=0.7.2", "print-ext>=0.12.1"]
+dependencies = ["yaclipy>=0.7.3", "print-ext>=0.13.1"]
 dynamic = ["version"]
 
 [project.urls]

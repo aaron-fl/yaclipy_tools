@@ -22,8 +22,8 @@ class FFmpeg(SysTool):
 
 
     @classmethod
-    def install_help(self, t):
-        return t("\v\v $ brew install ffmpeg")
+    def install_help(self, p):
+        return p("$ brew install ffmpeg", pad=-1)
 
 
     def process(self, infile, outfile, *args, **kwargs):

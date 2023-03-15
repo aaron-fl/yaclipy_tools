@@ -1,5 +1,5 @@
 import logging, re
-from print_ext import Text, Table, HR, Line
+from print_ext import Table, Printer, Line
 from collections import namedtuple
 from .sys_tool import SysTool
 from .config import Config
@@ -12,16 +12,16 @@ grep_groups = Config.var(''' A dictionary of project locations that will be grep
     {
         'Python Files': [
             (None, 'file1.py', 'file2.py'),
-            ('py', 'src/pyutil', '__pycache__', '.python'),
+            ('py', 'src/pyutil', '*/__pycache__/*', */.python/*'),
         ],
         'State Files': [
-            ('dart,py', 'src/state', '__pycache__', '.dist'),
-            ('*', 'docs', '.dist'),
+            ('dart,py', 'src/state', '*/__pycache__/*', '*/.dist/*'),
+            ('*', '*/docs/*', '*. '*/.dist/*'),
         ],
     }
 
 
-''', {'':['*', '.', '__pycache__', 'node_modules', '.*']})
+''', {'':[('*', '.', '*/__pycache__/*', '*/node_modules/*', 'local/*')]})
 
 
 FileMatch = namedtuple('FileMatch', ('fname','lno','match'))
@@ -38,11 +38,12 @@ class GroupMatch(dict):
         super().__init__({k:[FileMatch.from_str(line) for line in v.splitlines()] for k,v in groups.items()})
 
     def pretty(self, **kwargs):
-        t = Text()
-        if not(self): return t('\bwarn No matches\v')
+        p = Printer()
+        if not(self): return p('\bwarn No matches')
         for title, files in self.items():
-            t(HR(title, style='em'),'\v\v')
-            tbl = Table(0,1,tmpl='kv')
+            
+            tbl = Table(0,1,tmpl='')
+            tbl.cell('c0', just='>')
             fn = ''
             for f in files:
                 if self.re:
@@ -55,15 +56,16 @@ class GroupMatch(dict):
                         if s != e:
                             line.insert(-1,f.match[s:e],style='err')
                         i = e
-                        print(m.groups(), m.span(), f.match)
                     if i < len(f.match):
                         line.insert(-1, f.match[i:])
                 else:
                     line = Line(f.match)
-                tbl(f"\b{'1' if fn!=f.fname else 'w.;'} {f.fname}\bw.; :\b2 {f.lno}\t", line,'\t')
+                tbl(f"\b{'1' if fn!=f.fname else 'w.;'} {f.fname}\bw.; :\b2 {f.lno} \t", line,'\t')
                 fn = f.fname
-            t(tbl,'\n\n')
-        return t
+            if tbl:
+                p.hr(title, style='em', pad=1)
+                p(tbl,pad=1)
+        return p
 
 
 
@@ -89,7 +91,7 @@ class Grep(SysTool):
                 for loc in locs:
                     if loc[0]:
                         exclude = [f'--exclude={e}' for e in loc[2:]]
-                        include = [f'--include=*.{e.strip()}' for e in loc[0].split(',') if e.strip()]
+                        include = [] if loc[0] == '*' else [f'--include=*.{e.strip()}' for e in loc[0].split(',') if e.strip()]
                         cmd = base + include + exclude + ['-r', pattern, loc[1]]
                     else:
                         cmd = base + [pattern] + list(loc[1:]) + ['/dev/null']

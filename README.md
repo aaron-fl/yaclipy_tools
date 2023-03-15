@@ -14,6 +14,9 @@ This is a collection of wrappers around common system tools that works well with
 * curl
 * ffmpeg
 * git
+* gcloud
+* kubectl
+* docker
 
 
 The set of tools can easily be extended by subclassing SysTool

@@ -6,8 +6,6 @@ from .run import run, CmdNotFound, CmdRunError
 
 User = namedtuple('User', ['name','email','me','key'])
 
-NAME_RE = re.compile(r'(.*?)<(.*)>')
-
 
 class GPG(SysTool):
     
@@ -20,13 +18,19 @@ class GPG(SysTool):
     
     
     @classmethod
-    def install_help(self, t):
-        t('\v\v')
-        t('  $ brew install gnupg\v\v')
-        t('You should change the pinentry-program so that you can type your password on the command line\v\v')
-        t('  $ mkdir -p ~/.gnupg\v')
-        t('  $ echo "pinentry-program $(which pinentry-tty)" >> ~/.gnupg/gpg-agent.conf\v')
-        return t('  $ gpgconf --kill gpg-agent\v')
+    def init_once(self, *args):
+        self.NAME_RE = re.compile(r'(.*?)<(.*)>')
+        super().init_once(*args)
+
+
+    @classmethod
+    def install_help(self, p):
+        p('  $ brew install gnupg', pad=-1)
+        p('You should change the pinentry-program so that you can type your password on the command line', pad=1)
+        p('  $ mkdir -p ~/.gnupg')
+        p('  $ echo "pinentry-program $(which pinentry-tty)" >> ~/.gnupg/gpg-agent.conf')
+        p('  $ gpgconf --kill gpg-agent')
+        return p
 
 
     def import_key(self, fname):
@@ -42,7 +46,7 @@ class GPG(SysTool):
         if self('--list-keys', key_id, or_else=True):
             self('--import',fname, msg=f'Importing key for user: \b1 {usr_name}')
         me = not self('--list-secret-keys', key_id, or_else=True)
-        name, email = NAME_RE.match(usr_name).groups()
+        name, email = self.NAME_RE.match(usr_name).groups()
         return User(name=name.strip(), email=email, me=me, key=key_id)
 
 
@@ -54,7 +58,7 @@ class GPG(SysTool):
         for line in self('-K','--with-colons', stdout=True, msg="List Users"):
             if line.startswith('uid'):
                 line = line.split(':')
-                name, email = NAME_RE.match(line[9]).groups()
+                name, email = self.NAME_RE.match(line[9]).groups()
                 yield User(name=name.strip(), email=email, me=True, key=line[7])
     
 

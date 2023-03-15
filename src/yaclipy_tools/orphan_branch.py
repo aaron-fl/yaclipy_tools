@@ -32,7 +32,7 @@ class File():
         return other in self.flags
 
 
-    def pretty(self):
+    def pretty(self, **kwargs):
         style = 'w,.'
         if FStat.CONFLICT in self: style = 'err'
         elif FStat.REM in self: style = 'm!'
@@ -82,10 +82,10 @@ class File():
 class FileList(list):
 
     def pretty(self, **kwargs):
-        t = Text()
+        p = Printer()
         for f in sorted(self):
-            t(pretty(f), '\v')
-        return t
+            p.pretty(f)
+        return p
 
     def add(self, name, flags):
         try:

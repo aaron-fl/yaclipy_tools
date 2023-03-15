@@ -1,15 +1,15 @@
 import traceback, os, copy, inspect, re
 from .singleton import Singleton
-from print_ext import Table, Text, HR, PrettyException, pretty
+from print_ext import Table, Text, PrettyException, pretty
 
 
 class InvalidTarget(PrettyException):
     def pretty(self, **kwargs):
-        out = Text()
-        out(f'\berr {self.target}\b  is not a valid target.  Valid targets are:\n')
+        p = Printer()
+        p(f'\berr {self.target}\b  is not a valid target.  Valid targets are:')
         for t in Config.valid_targets():
-            out(f' * \b1 {t}\n')
-        return out
+            p(f' * \b1 {t}')
+        return p
 
 
 
@@ -21,11 +21,12 @@ class ConfigTargetUnset(PrettyException):
 
 class ConfigVar():
     UNSET = object()
-    NAME = re.compile('\s*(\w+)\s*=')
+    NAME = re.compile(r'\s*(\w+)\s*=')
     
-    def __init__(self, doc, default):
+    def __init__(self, doc, default, coerce=lambda x:x):
         self.dfns = []
         self.doc = doc
+        self.coerce = coerce
         self.default = default
         self.value = ConfigVar.UNSET
         self._value = ConfigVar.UNSET
@@ -49,17 +50,19 @@ class ConfigVar():
 
 
     def __call__(self, value=UNSET):
-        if value != ConfigVar.UNSET: self.set(value)
-        if self._value == ConfigVar.UNSET:
-            if self.value == ConfigVar.UNSET: raise ConfigTargetUnset()
-            self._value = self.value() if inspect.isroutine(self.value) else self.value
+        if self._value == ConfigVar.UNSET and self.value != ConfigVar.UNSET:
+            self._value = self.coerce(self.value() if inspect.isroutine(self.value) else self.value)
+        if value != ConfigVar.UNSET:
+            self.set(value)
+        elif self._value == ConfigVar.UNSET:
+            raise ConfigTargetUnset()
         return self._value
        
 
 
 class ConfigTarget():
 
-    def override(self, name=None, before=None, after=None, mutex=None): 
+    def override(self, name=None, before=None, after=None, mutex=None, implicit=None): 
         def _override(fn):
             fn_orig = self.fn
             def _chainup():
@@ -70,12 +73,14 @@ class ConfigTarget():
             if before != None: self.set_group('before', before)
             if after != None: self.set_group('after', after)
             if mutex != None: self.set_group('mutex', mutex)
+            if implicit != None: self.implicit = implicit
         return _override
 
 
-    def __init__(self, fn, name=None, before=[], after=[], mutex=[]):
+    def __init__(self, fn, name=None, before=[], after=[], mutex=[], implicit=False):
         self.fn = fn
         self.name = None
+        self.implicit = implicit
         self.set_name(name or fn.__name__)
         self.set_group('before', before)
         self.set_group('after', after)
@@ -111,7 +116,7 @@ class Config():
     vars = []
     targets = {}
     _valid_targets = None
-    _configured = ''
+    cur_target = ''
 
     @classmethod
     def retarget(self, name_old, name_new, target):
@@ -123,13 +128,18 @@ class Config():
 
     @classmethod
     def set_target(self, target):
-        if self._configured.lower() == target.lower(): return
+        if self.cur_target.lower() == target.lower(): return
         for v in self.vars: v.reset()
+        if target == '-': return
         if not self.is_valid_target(target):
             raise InvalidTarget(target=target)
-        for t in target.split('.'):
+        targets = target.split('.')
+        for t in self.targets.values():
+            if not t.implicit: continue
+            targets.insert(0, t.name)
+        for t in targets:
             self.targets[t.lower()].fn()
-        self._configured = target
+        self.cur_target = target
 
 
     @classmethod
@@ -160,7 +170,7 @@ class Config():
                 if m in target: return True
         def _try(target):
             for t in self.targets.values():
-                if t in target: continue
+                if t in target or t.implicit: continue
                 if _after_fail(t,target): continue
                 if _mutex_fail(t,target): continue
                 target.append(t)
@@ -179,14 +189,14 @@ class Config():
 
     @classmethod
     def pretty(self, **kwargs):
-        p = Text()
+        p = Printer()
         tbl = Table(1,1,100, tmpl='pad')
         tbl.cell('C0', style='1', just='>')
         for var in self.vars:
             tbl(var.name,'\t', pretty(var()),'\t',var.doc,'\t')
-        p(tbl,'\n\n')
-        p(HR('Targets'), '\n\n')
+        p(tbl, pad=1)
+        p.hr('Targets', pad=1)
         for name in self.valid_targets():
-            p(' * ', '\b1$', name, '\n')
+            p(' * ', '\b1$', name)
         return p
         

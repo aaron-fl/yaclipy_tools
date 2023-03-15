@@ -1,4 +1,3 @@
-import sys
 from .sys_tool import SysTool
 from .config import Config
 
@@ -16,7 +15,9 @@ class Curl(SysTool):
         ''' Download a file.
 
         Parameters:
-            fname <path>
+            <url>
+                The url to download
+            <path>, fname<path> [None]
                 Save the file here.  Otherwise, if fname is None, yield each downloaded line.
         '''
         if fname:

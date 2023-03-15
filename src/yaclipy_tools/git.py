@@ -4,7 +4,6 @@ from .sys_tool import SysTool
 from .config import Config
 
 
-
 class Git(SysTool):
     cmd = Config.var("An absolute pathname to the git command", 'git')
 
@@ -29,6 +28,8 @@ class Git(SysTool):
 
     @property
     def name(self):
+        ''' The name of the repo based on either the remote name or the local name.
+        '''
         if not hasattr(self, '_name'):
             l = list(self('config', '--get', 'remote.origin.url', stdout=True, msg=f'{self.repo}: Origin', or_else=['']))[0]
             if not l:
@@ -38,10 +39,18 @@ class Git(SysTool):
 
 
     def current_commit(self):
+        ''' The current commit hash
+        '''
         return list(self('rev-parse','HEAD', msg=f'{self.repo}: Current commit', stdout=True))[0]
 
 
     def status(self, *args, changes_only=False):
+        ''' A list of changes [(code, file)]
+
+        Parameters:
+            changes_only <bool> [False]
+                If False, then check if we need to push `: ` or pull `; `
+        '''
         changes = [x for x in self('status', '-z', *args, stdout='raw', msg=f'{self.repo}: Status').decode('utf8').split('\0') if x]
         changes = [(k[:2],Path(k[3:])) for k in changes]
         if changes or changes_only: return changes
@@ -53,17 +62,22 @@ class Git(SysTool):
 
 
     def current_branch(self):
+        ''' The name of the current branch.
+        '''
         return list(self('symbolic-ref', '--short', 'HEAD', stdout=True, msg=f'{self.repo}: Branch'))[0]
 
 
     def up_to_date(self):
+        ''' Check `status()` to see if we are up-to-date.
+        '''
         return not bool(self.status())
 
 
     def list(self, *pattern, invert=False):
+        ''' An iterator using `ls-files` to list files based on .gitignore rules.
+        '''
         for p in self('ls-files', *pattern, *(['--other'] if invert else []), stdout=True, msg=f'{self.repo}: List'):
             yield Path(p)
-
 
 
 
@@ -77,6 +91,8 @@ def rebase_ff(base, ontop, *, repo='.', verbose__v=False):
             The branch containing new commits.
         --repo <path>
             The repository to work on ('.' by default).
+        --verbose, -v
+            Use up to three -vvv for lots of verbosity.
     '''
     git = Git(repo=repo, verbose=int(verbose__v))
     git('rebase', base, ontop)

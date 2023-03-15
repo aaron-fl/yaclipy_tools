@@ -1,8 +1,8 @@
 import io
-from print_ext import Printer
+from print_ext import Flattener
 
 def printer(**kwargs):
     o = io.StringIO()
-    p = Printer(stream=o, **kwargs)
+    p = Flattener(stream=o, **kwargs)
     return o,p
    

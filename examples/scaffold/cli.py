@@ -33,4 +33,4 @@ try:
     from pyutil.main import main
     CLI.Command(main)(sys.argv[1:]).run()
 except PrettyException as e:
-    print.pretty(e)
+    print.pretty(e, pad=1)
