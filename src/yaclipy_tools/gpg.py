@@ -1,7 +1,7 @@
 import re, os
 import yaclipy as CLI
 from collections import namedtuple
-from . import SysTool, OneLine, Lines
+from . import SysTool
 
 User = namedtuple('User', ['name','email','me','key'])
 
@@ -13,7 +13,7 @@ class GPG(SysTool):
 
     @classmethod
     async def get_version(self):
-        line = await self.proc.using(OneLine(1))('--version')
+        line = await self.proc('--version').one()
         return line.split(' ')[-1]
 
     
@@ -40,7 +40,7 @@ class GPG(SysTool):
 
     async def import_key(self, fname):
         key_id = ''
-        for line in await self.using(Lines(1))('--with-colons', '--import-options', 'show-only', '--keyid-format', 'long', '--import', fname, or_else=[]):
+        for line in await self('--with-colons', '--import-options', 'show-only', '--keyid-format', 'long', '--import', fname, or_else=[]).lines():
             if line.startswith('pub'):
                 key_id = line.split(':')[4]
             if line.startswith('uid'):
@@ -60,7 +60,7 @@ class GPG(SysTool):
     
  
     async def each_user(self):
-        for line in await self.using(Lines(1))('-K', '--with-colons'):
+        for line in await self('-K', '--with-colons').lines():
             if not line.startswith('uid'): continue
             line = line.split(':')
             name, email = self.NAME_RE.match(line[9]).groups()

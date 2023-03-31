@@ -1,22 +1,20 @@
 import pytest, sys, pathlib, asyncio
 from print_ext import Printer, Flatten
 from print_ext.line import SMark as SM
-from yaclipy_tools.proc_task import ProcTask, Log, Echo, Plugin, Lines, OneLine, ReturncodeError
+from yaclipy_tools.proc_task import ProcTask, Log, Echo, Plugin, Lines, One, ReturncodeError
 
 ECHO = ProcTask(sys.executable, '-m', 'tests.echo')
 
 
-def test_proc_using():
-    a = ECHO.using(Lines)
-    assert(a.partial['_cmd'][1:] == ('-m', 'tests.echo'))
+def test_proc_use():
+    a = ECHO.use(Lines)
+    assert(a.cmd[1:] == ('-m', 'tests.echo'))
     b = a(0)
-    assert(b.partial['_cmd'][1:] == ('-m', 'tests.echo'))
     assert(b.cmd[1:] == ('-m', 'tests.echo', '0'))
     c =  b(1, 2)
-    assert(c.partial['_cmd'][1:] == ('-m', 'tests.echo'))
     assert(c.cmd[1:] == ('-m', 'tests.echo', '0', '1', '2'))
-    d = c.using(Lines)
-    assert(d.partial['_cmd'][1:] == ('-m', 'tests.echo', '0', '1', '2'))
+    d = c.use(Lines)
+    assert(d.cmd[1:] == ('-m', 'tests.echo', '0', '1', '2'))
 
 
 
@@ -36,15 +34,15 @@ async def test_proc_task_log(tmp_path):
     #somefile = AIOFile('somefile.txt')
     
     with open(tmp_path/'test.txt', 'wb') as f:
-        pv = ECHO.using(Log(f))(0, 'a', '!b')
+        pv = ECHO.use(Log(f))(0, 'a', '!b')
         pv.start()
         print(pv.mio)
         await pv
         end = f.tell()
         assert(end == 4)
-        await ECHO.using(Log(f,1))(0, 'c', '!d')
+        await ECHO.use(Log(f,1))(0, 'c', '!d')
         with open(tmp_path/'test2.txt', 'wb') as f2:
-            await ECHO.using(Log(f,2), Log(f2,1))(0, 'e', '!f')
+            await ECHO.use(Log(f,2), Log(f2,1))(0, 'e', '!f')
     assert(open(tmp_path/'test.txt').read() == 'a\nb\nc\nf\n')
     assert(open(tmp_path/'test2.txt').read() == 'e\n')
 
@@ -66,7 +64,7 @@ def test_proc_task_custom_mixins():
         def m2(self):
             return f"z{super().m2()}"
 
-    pt = ProcTask.using(MyMixin, YourMixin)(name="Ab")
+    pt = ProcTask().use(MyMixin, YourMixin)(name="Ab")
     assert(pt.m1() == 'AB')
     with pytest.raises(AttributeError):
         assert(pt.m2() == 'AB')
@@ -84,7 +82,7 @@ async def test_proc_command_not_found():
 @pytest.mark.asyncio
 async def test_proc_task_echo():
     p = Printer.using(Flatten)()
-    echo = ProcTask.using(Echo(1,style='g'), Echo(2,style='r'), context=p.context())
+    echo = ProcTask().use(Echo(1,style='g'), Echo(2,style='r'), context=p.context())
     await echo(sys.executable, '-m', 'tests.echo', 0, 'e', '!f')
     for k in [r.styled() for r in p.flatten()]:
         assert(k in [('e', [SM('g',0,1)]), ('f', [SM('r',0,1)])])
@@ -93,10 +91,10 @@ async def test_proc_task_echo():
 
 @pytest.mark.asyncio
 async def test_proc_task_lines_3():
-    l0 = ECHO.using(Lines)(0, 'a')
+    l0 = ECHO.use(Lines(3))(0, 'a')
     l1 =  l0('!b', 'c')
     assert(set(await l1) == set(['a','b','c']))
-    l2 = await l0.using(Lines(2))('!d')
+    l2 = await l0.use(Lines(2))('!d')
     assert(set(l2[0]) == set(['a','d']))
     assert(l2[1] == ['d'])
 
@@ -104,16 +102,16 @@ async def test_proc_task_lines_3():
 
 @pytest.mark.asyncio
 async def test_proc_task_lines_only():
-    echo = ECHO.using(Lines(2, only=2), Lines)
+    echo = ECHO.use(Lines(2, only=2), Lines)
     a = await echo(0, 'a','b','!c', 'd', '!e', '!f')
     assert(a[0] == ['c','e'])
-    assert(set(a[1]) == {'a','b','c','d','e','f'})
+    assert(set(a[1]) == {'a','b','d'})
 
 
 
 @pytest.mark.asyncio
 async def test_proc_task_one_line():
-    echo = ECHO.using(OneLine(1), OneLine(2, row=1))
+    echo = ECHO.use(One(1), One(2, row=1))
     assert(await echo(0) == (None, None))
     assert(await echo(0)('a','b', '!c', 'd') == ('a', None))
     

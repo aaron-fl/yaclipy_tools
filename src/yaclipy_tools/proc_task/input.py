@@ -34,7 +34,6 @@ class Input(Plugin):
             if isinstance(data, bytes) or isinstance(data, bytearray):
                 data = io.BytesIO(data)
         while line:=data.readline(io.DEFAULT_BUFFER_SIZE):
-            print(f'---------> {line}')
             self.mio[0].write(line)
             await asyncio.sleep(0)
 

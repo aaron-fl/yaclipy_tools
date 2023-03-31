@@ -2,7 +2,7 @@ import sys, os, logging
 import yaclipy as CLI
 from print_ext import Printer
 from pathlib import Path
-from . import SysTool, OneLine
+from . import SysTool
 from .curl import Curl
 
 
@@ -16,7 +16,7 @@ class Nginx(SysTool):
 
     @classmethod
     async def get_version(self):
-        line = await self.proc.using(OneLine(2))('-v')
+        line = await self.proc('-v').one(2)
         return line.rsplit('/',1)[1]
 
 

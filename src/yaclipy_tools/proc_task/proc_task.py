@@ -2,6 +2,11 @@ import asyncio, shlex, functools
 from subprocess import PIPE, DEVNULL
 from print_ext import PrettyException
 from .plugin import Plugin, NO_RESULT
+from .echo import Echo
+from .input import Input
+from .lines import Lines, One
+from .log import Log
+from .watch import Watch
 from ..mio import MioBuffer
 
 
@@ -18,44 +23,15 @@ class ManyError(PrettyException):
         for e in self.exceptions:
             print.hr(str(e))
             print.pretty(e)
-        
 
 
-class MetaProcTask(type):
-    def __call__(self, *args, **kwargs):
-        kw = dict(self.partial)
-        kw.update(kwargs)
-        cmd = kw.pop('_cmd')
-        return super().__call__(*cmd, *args, **kw)
-
-
-    def using(self, *plugins, **partial):
-        partial.setdefault('_cmd', tuple(self.partial['_cmd']))
-        d = {
-            'plugins': self.plugins + [x if isinstance(x, Plugin) else x() for x in plugins],
-            'partial': partial,
-        }
-        for m in d['plugins']:
-            if not isinstance(m, Plugin): raise ValueError(f"Mixins must be subclasses of Plugin, not {type(m)} {m}")
-            for name in dir(m):
-                try:
-                    fn = getattr(m.__class__,name)
-                    fn.is_proc_task_method
-                except: continue
-                d[name] = getattr(m.__class__,name)
-        name = 'ProcTask' + ''.join(set(m.__class__.__name__ for m in d['plugins']))
-        return type(name, (ProcTask, ), d)
-
+class ProcTask(asyncio.SubprocessProtocol):#, metaclass=MetaProcTask):
+    #plugins = []
+    #partial = {'_cmd':tuple()}
     
-
-
-
-class ProcTask(asyncio.SubprocessProtocol, metaclass=MetaProcTask):
-    plugins = []
-    partial = {'_cmd':tuple()}
-    
-    def __init__(self, *args, name=None, success=[0], or_else=NO_RESULT, context=None, **kwargs):
+    def __init__(self, *args, name=None, success=[0], or_else=NO_RESULT, context=None, plugins=[]):
         self.name = name
+        self.plugins = plugins 
         self.or_else = or_else
         self.success = success
         self.context = context
@@ -64,15 +40,16 @@ class ProcTask(asyncio.SubprocessProtocol, metaclass=MetaProcTask):
 
 
     def __call__(self, *args, **kwargs):
-        return self.__class__(*self.cmd, *args, _cmd=tuple(), **self._partial(kwargs))
+        return self.__class__(*self.cmd, *args, **self._partial(kwargs))
 
 
     def _partial(self, kwargs):
         return dict(
             name = kwargs.get('name', None) if self.name == None else str(self) + kwargs.get('name', ''),
+            plugins = kwargs.get('plugins', self.plugins),
+            or_else = kwargs.get('or_else', self.or_else),
             success = kwargs.get('success', self.success),
             context = kwargs.get('context', self.context),
-            or_else = kwargs.get('or_else', self.or_else),
         )
 
 
@@ -82,11 +59,23 @@ class ProcTask(asyncio.SubprocessProtocol, metaclass=MetaProcTask):
         return str(self.name)
 
 
-    def _using(self, *args, **kwargs):
-        partial = self._partial(kwargs)
-        partial['_cmd'] = tuple(self.cmd)
-        return ProcTask.using(*self.plugins, *args, **partial)
-
+    def use(self, *args, **kwargs):
+        plugins = [p if isinstance(p, Plugin) else p() for p in args]
+        exports = {}
+        names = set()
+        for p in plugins:
+            if not isinstance(p, Plugin): raise ValueError(f"Plugins must be subclasses of Plugin, not {type(p)}: {p}")
+            for name in dir(p):
+                try:
+                    fn = getattr(p.__class__, name)
+                    fn.is_proc_task_method
+                except: continue
+                exports[name] = fn
+                names.add(p.__class__.__name__)
+        kwargs['plugins'] = self.plugins + plugins
+        cls = type(self.__class__.__name__ + ''.join(names), (self.__class__,), exports) if exports else self.__class__
+        return cls(*self.cmd, **self._partial(kwargs))
+    
 
     def start(self):
         ''' Just start the process and return a running asyncio.Task
@@ -170,24 +159,10 @@ class ProcTask(asyncio.SubprocessProtocol, metaclass=MetaProcTask):
     def __pretty__(self, print, **kwargs):
         print("OBJ: ", self.__class__.__name__, '\b1$', str(self))
         print(f" $ ", shlex.join(self.cmd))
-        print.pretty(self.__class__)
-
-
-    @classmethod
-    def __pretty__(self, print, **kwargs):
-        print('CLS: ', self.__name__)
-        print.pretty({'partial':self.partial, 'plugins':self.plugins})
-
+        for plugin in self.plugins:
+            print.pretty(plugin)
 
     # Task Methods
-
-    def __getattr__(self, attr):
-        if attr == 'using':
-            return self._using if isinstance(self, ProcTask) else getattr(self.__class__, 'using')
-        elif hasattr(self.task, attr):
-            return getattr(self.task, attr)
-        return super().__getattribute__(attr)
-
 
     def result(self):
         return self.task.result()
@@ -240,3 +215,25 @@ class ProcTask(asyncio.SubprocessProtocol, metaclass=MetaProcTask):
 
     def connection_lost(self, exc):
         self._connection_lost.set_result(exc)
+
+
+    # Common Plugins
+
+    def lines(self, *args, **kwargs):
+        return self.use(Lines(*args,**kwargs))
+    
+    def echo(self, *args, **kwargs):
+        return self.use(Echo(*args, **kwargs))
+
+    def one(self, *args, **kwargs):
+        return self.use(One(*args, **kwargs))
+
+    def input(self, *args, **kwargs):
+        return self.use(Input(*args, **kwargs))
+
+    def log(self, *args, **kwargs):
+        return self.use(Log(*args, **kwargs))
+
+    def watch(self, *args, **kwargs):
+        return self.use(Watch(*args, **kwargs))
+        

@@ -1,6 +1,6 @@
 from print_ext import PrettyException, Printer
 import yaclipy as CLI
-from . import SysTool, OneLine, Lines
+from . import SysTool
 
 
 def parse_version(lines, version):
@@ -23,9 +23,9 @@ class GCloudProjectError(PrettyException):
 
     @staticmethod
     async def check(tool, want):
-        line = await tool.proc.using(OneLine(1))('config', 'get-value', 'project')
+        line = await tool.proc('config', 'get-value', 'project').one()
         cur = line.strip()
-        config_list = await tool.proc.using(Lines(1))('config', 'configurations', 'list')
+        config_list = await tool.proc('config', 'configurations', 'list').lines()
         if cur != want:
             raise GCloudProjectError(cur_project=cur, want_project=want, config_list=config_list)
 
@@ -37,7 +37,7 @@ class GCloud(SysTool):
     
     @classmethod
     async def get_version(self):
-        line = await self.proc.using(OneLine(1))('--version')
+        line = await self.proc('--version').one()
         return line.split(' ')[-1]
             
 

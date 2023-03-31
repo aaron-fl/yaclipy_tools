@@ -50,8 +50,8 @@ class SysTool(metaclass=Singleton):
         self.version = asyncio.create_task(self._verify(str(version)))
         deps.append(self.version)
         self.deps = deps
-        self.proc = ProcTask.using(*plugins, **kwargs)(self.cmd())
-        self.proc_verified = self.proc.using(DepCheck(deps))
+        self.proc = ProcTask().use(*plugins, **kwargs)(self.cmd())
+        self.proc_verified = self.proc.use(DepCheck(deps))
 
 
     @classmethod
@@ -73,8 +73,8 @@ class SysTool(metaclass=Singleton):
         return await asyncio.gather(*self.deps)
 
 
-    def using(self, *args, **kwargs):
-        return self.proc_verified.using(*args, **kwargs)
+    def use(self, *args, **kwargs):
+        return self.proc_verified.use(*args, **kwargs)
 
 
     def __call__(self, *args, **kwargs):

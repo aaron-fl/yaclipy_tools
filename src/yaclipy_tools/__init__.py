@@ -2,4 +2,4 @@
 #
 # SPDX-License-Identifier: MIT
 from .sys_tool import SysTool
-from .proc_task import ProcTask, Plugin, Echo, Lines, OneLine, Log, Watch, Input
+from .proc_task import ProcTask, Plugin, Echo, Lines, One, Log, Watch, Input

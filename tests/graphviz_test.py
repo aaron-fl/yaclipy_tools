@@ -1,7 +1,7 @@
 import pytest
 from print_ext import Printer
 from yaclipy_tools.all import GraphViz
-from yaclipy_tools import Lines, Log, Input
+from yaclipy_tools import Log, Input
 from yaclipy_tools.mio import MioFile
 from .testutil import get_tool
 
@@ -12,7 +12,7 @@ async def test_graphviz_plugins(tmp_path):
     path = tmp_path/'f.dot'
     f = MioFile(path)
     print(f.path)
-    lines = await dot.using(Log(f, 1))('dot', '-P')
+    lines = await dot('dot', '-P').log(f, 1)
     await f.close()
     await dot.gen('dot', path)
 
@@ -21,4 +21,4 @@ async def test_graphviz_plugins(tmp_path):
 async def test_graphviz_input(tmp_path):
     t = 'digraph {\na -> b;\n}'
     dot = await get_tool(GraphViz(7))
-    await dot.gen('dot', '-', path=tmp_path/'test.png').using(Input(t))()
+    await dot.gen('dot', '-', path=tmp_path/'test.png').input(t)

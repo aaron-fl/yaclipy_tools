@@ -1,7 +1,7 @@
 import os, re
 import yaclipy as CLI
 from print_ext import PrettyException
-from . import OneLine, SysTool, Echo
+from . import SysTool, Echo
 
 
 class CertificateExists(PrettyException): pass
@@ -13,7 +13,7 @@ class OpenSSL(SysTool):
 
     @classmethod
     async def get_version(self):
-        line = await self.proc.using(OneLine(1))('version', '-v')
+        line = await self.proc('version', '-v').one()
         return line.split(' ')[1]
 
 
@@ -29,7 +29,7 @@ class OpenSSL(SysTool):
 
 
     async def cert_inspect(self, prefix, mode='-subject'):
-        line = await self.using(OneLine(1))('x509', '-in', str(prefix)+'.pem', mode, '-noout')
+        line = await self('x509', '-in', str(prefix)+'.pem', mode, '-noout').one()
         return {a[0]:a[1] for a in [arg.split(' = ',1) for arg in line[len(mode):].split(', ')]}
 
 
@@ -76,9 +76,9 @@ class OpenSSL(SysTool):
         if path:
             await self('rand', '-hex', '-out', path, bytes)
         else:
-            return await self.using(OneLine(1))('rand','-hex', bytes)
+            return await self('rand','-hex', bytes).one()
         
 
     async def hash(self, path):
-        line = await self.using(OneLine(1))('dgst', '-sha256', '-hex', '-r', path, or_else=None)
+        line = await self('dgst', '-sha256', '-hex', '-r', path, or_else=None).one()
         return '' if line == None else line.split(' ',1)[0]

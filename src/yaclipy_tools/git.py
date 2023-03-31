@@ -2,7 +2,7 @@ import sys, os, asyncio
 import yaclipy as CLI
 from print_ext import PrettyException
 from pathlib import Path
-from . import SysTool, OneLine, Watch, Lines
+from . import SysTool
 
 
 class GitRepoError(PrettyException):
@@ -12,9 +12,9 @@ class GitRepoError(PrettyException):
     @staticmethod
     async def check(tool):
         if not tool.repo: return
-        line = await tool.proc.using(OneLine(1))('-C', tool.repo, 'config', '--get', 'remote.origin.url', success=True)
+        line = await tool.proc('-C', tool.repo, 'config', '--get', 'remote.origin.url', success=True).one()
         if not line:
-            line = await tool.proc.using(OneLine(1))('-C', tool.repo, 'rev-parse','--show-toplevel')
+            line = await tool.proc('-C', tool.repo, 'rev-parse','--show-toplevel').one()
         return os.path.splitext(os.path.basename(line))[0]
 
 
@@ -26,7 +26,7 @@ class Git(SysTool):
 
     @classmethod
     async def get_version(self):
-        line = await self.proc.using(OneLine(1))('--version')
+        line = await self.proc('--version').one()
         return line.split(' ')[2]
 
 
@@ -42,7 +42,7 @@ class Git(SysTool):
     def current_commit(self):
         ''' The current commit hash
         '''
-        return self.using(OneLine(1))('rev-parse','HEAD')
+        return self('rev-parse','HEAD').one()
 
 
     async def status(self, *args, changes_only=False):
@@ -52,12 +52,12 @@ class Git(SysTool):
             changes_only <bool> [False]
                 If False, then check if we need to push `: ` or pull `; `
         '''
-        changes = await self.using(Lines(end='\0'))('status', '-z', *args)
+        changes = await self('status', '-z', *args).lines(end='\0')
         changes = [(k[:2],Path(k[3:])) for k in changes if k]
         if changes or changes_only: return changes
-        if await self.using(OneLine(1))('fetch', '--dry-run'):
+        if await self('fetch', '--dry-run').one():
             return [('; ','Need to pull')]
-        if await self.using(OneLine(1))('status', '-sb').split('[')[-1].startswith('ahead'):
+        if (await self('status', '-sb').one()).split('[')[-1].startswith('ahead'):
             return [(': ','Need to push')] 
         return []
 
@@ -65,7 +65,7 @@ class Git(SysTool):
     def current_branch(self):
         ''' The name of the current branch.
         '''
-        return self.using(OneLine(1))('symbolic-ref', '--short', 'HEAD')
+        return self('symbolic-ref', '--short', 'HEAD').one()
 
 
     async def up_to_date(self):
@@ -77,7 +77,7 @@ class Git(SysTool):
     async def list(self, *pattern, invert=False):
         ''' An iterator using `ls-files` to list files based on .gitignore rules.
         '''
-        proc = self.using(Watch(1))('ls-files', *pattern, *(['--other'] if invert else []))
+        proc = self('ls-files', *pattern, *(['--other'] if invert else [])).watch(1)
         proc.start()
         with proc.mio[1].reader() as read:
             async for line in read.each_line():

@@ -112,4 +112,4 @@ async def test_systool_deps_exception():
     
     tool = Tool('1')
     with pytest.raises(NotImplementedError):
-        await tool.using(Echo)()
+        await tool().echo()

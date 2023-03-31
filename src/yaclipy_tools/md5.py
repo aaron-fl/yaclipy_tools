@@ -1,5 +1,5 @@
 import yaclipy as CLI
-from . import SysTool, OneLine
+from . import SysTool
 
 
 class Md5(SysTool):
@@ -13,5 +13,5 @@ class Md5(SysTool):
 
 
     async def hash(self, file):
-        line = await self.using(OneLine(1))(file)
+        line = await self(file).one()
         return line.split(' ')[-1]

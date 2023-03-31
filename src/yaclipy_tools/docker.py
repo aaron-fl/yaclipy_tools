@@ -1,7 +1,7 @@
 import json, asyncio
 import yaclipy as CLI
 from print_ext import PrettyException
-from . import SysTool, OneLine, Lines
+from . import SysTool
 
 
 class DockerNotRunning(PrettyException):
@@ -19,7 +19,7 @@ class Docker(SysTool):
     
     @classmethod
     async def get_version(self):
-        line = await self.proc.using(OneLine(1))('--version')
+        line = await self.proc('--version').one()
         return line.split(',')[0].split(' ')[2]
 
 
@@ -36,10 +36,10 @@ class Docker(SysTool):
             <docker_image>
                 The docker image name
         '''
-        return self.using(OneLine(1))('images', '-q', image)
+        return self('images', '-q', image).one()
 
 
     async def containers(self):
         ''' Get a list of all the containers.
         '''
-        return [json.loads(line) for line in await self.using(Lines(1))('container', 'ls', '-a', '--format', '{{json .}}')]
+        return [json.loads(line) for line in await self('container', 'ls', '-a', '--format', '{{json .}}').lines()]

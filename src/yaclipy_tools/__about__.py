@@ -1,4 +1,4 @@
 # SPDX-FileCopyrightText: 2023-present Aaron <aaron@framelunch.jp>
 #
 # SPDX-License-Identifier: MIT
-__version__ = '0.9.1'
+__version__ = '0.10.1'

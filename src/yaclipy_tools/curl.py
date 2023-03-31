@@ -1,5 +1,5 @@
 import yaclipy as CLI
-from . import SysTool, OneLine, Echo, Lines
+from . import SysTool
 
 
 class Curl(SysTool):
@@ -9,7 +9,7 @@ class Curl(SysTool):
 
     @classmethod
     async def get_version(self):
-        line = await self.proc.using(OneLine(1))('--version')
+        line = await self.proc('--version').one()
         return line.split(' ')[1]
 
 
@@ -28,4 +28,4 @@ class Curl(SysTool):
         if path:
             return self(url, '-o', path)
         else:
-            return self.using(Lines(1))(url)
+            return self(url).lines()

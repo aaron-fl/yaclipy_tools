@@ -19,7 +19,7 @@ async def test_ffmpeg_info_bird():
     bird = pathlib.Path('local/birdsong.ogg')
     if not bird.exists():
         #async with Printer().task_group("Download bird song") as tg:
-        await curl.download('https://upload.wikimedia.org/wikipedia/commons/7/7c/Turdus_merula_2.ogg', bird).using(Echo(2))()
+        await curl.download('https://upload.wikimedia.org/wikipedia/commons/7/7c/Turdus_merula_2.ogg', bird).echo(2)
     info = await ffmpeg.info(bird)
     Printer().pretty(info)
     assert(info['audio']['codec'] == 'vorbis')

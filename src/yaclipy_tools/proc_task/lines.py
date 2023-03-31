@@ -5,7 +5,7 @@ class Lines(Plugin):
     ''' Collect all of the output into a list of lines and return that object.
     '''
 
-    def start(self, fd=1|2, *, only=0, encoding='utf8'):
+    def start(self, fd=1, *, only=0, encoding='utf8'):
         self.fd = fd
         if fd not in [1,2,3]: raise ValueError(f"Invalid fd: {fd}, must be 1,2 or 3")
         self.only = only
@@ -29,7 +29,7 @@ class Lines(Plugin):
 
 
 
-class OneLine(Lines):
+class One(Lines):
 
     def start(self, *args, row=0, **kwargs):
         self.row = row

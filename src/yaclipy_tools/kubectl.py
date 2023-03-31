@@ -17,13 +17,13 @@ class Kubectl(SysTool):
 
     @classmethod
     async def get_version(self):
-        return _parse_version(await self.proc.using(Lines(1))('version'), 'client')
+        return _parse_version(await self.proc('version').lines(), 'client')
 
 
     async def server_version(self):
         ''' The version of the kubernetes cluster
         '''
-        return _parse_version(await self.using(Lines(1))('version'), 'server')
+        return _parse_version(await self('version').lines(), 'server')
 
     
     def apply(self, data_or_path):

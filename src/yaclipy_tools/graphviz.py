@@ -1,7 +1,7 @@
 import yaclipy as CLI
 from print_ext import Printer
 from pathlib import Path
-from . import SysTool, OneLine
+from . import SysTool
 
 
 class GraphViz(SysTool):
@@ -11,7 +11,7 @@ class GraphViz(SysTool):
     @classmethod
     async def get_version(self):
         Printer().pretty(self.proc)
-        line = await self.proc.using(OneLine(2))(self.cmd(), '-V')
+        line = await self.proc(self.cmd(), '-V').one(2)
         line = line.lower().split(' ')
         return line[line.index('version')+1]
 
@@ -31,9 +31,8 @@ class GraphViz(SysTool):
     def init_once(self, *args, **kwargs):
         super().init_once(*args, **kwargs)
         self.cmd_base = Path(self.cmd()).parent
-        print(f"cmd_base: {self.cmd_base}")
-        self.proc.partial['_cmd'] = tuple()
-        self.proc_verified.partial['_cmd'] = tuple()
+        self.proc.cmd = tuple()
+        self.proc_verified.cmd = tuple()
 
 
     def __call__(self, name, *args, **kwargs):

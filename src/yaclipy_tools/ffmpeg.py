@@ -1,6 +1,6 @@
 import sys, os, re
 import yaclipy as CLI
-from . import SysTool, Lines, OneLine
+from . import SysTool
 
 
 class FFmpeg(SysTool):
@@ -9,7 +9,7 @@ class FFmpeg(SysTool):
 
     @classmethod
     async def get_version(self):
-        line = await self.proc.using(OneLine(1))('-version')
+        line = await self.proc('-version').one()
         return line.split(' ')[2]
 
 
@@ -39,7 +39,7 @@ class FFmpeg(SysTool):
 
     async def info(self, infile, *args, **kwargs):
         info = {}
-        for line in await self.using(Lines(2))('-i', infile, '-hide_banner', success=[0,1]):
+        for line in await self('-i', infile, '-hide_banner', success=[0,1]).lines(2):
             if 'no such file' in line.lower(): return None
             if m:=self.DUR_RE.search(line):
                 info['dur'] = int(m[1])*3600 + int(m[2])*60 + float(m[3])

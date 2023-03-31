@@ -2,7 +2,7 @@ import logging, re
 import yaclipy as CLI
 from print_ext import Table, Printer, Line
 from collections import namedtuple
-from . import SysTool, OneLine
+from . import SysTool
 from subprocess import Popen, PIPE, DEVNULL
 
 log = logging.getLogger('Grep-Tool')
@@ -75,7 +75,7 @@ class Grep(SysTool):
 
     @classmethod
     async def get_version(self):
-        line = await self.proc.using(OneLine(1))('--version')
+        line = await self.proc('--version').one()
         return line.rsplit(' ',1)[1].split('-')[0]
     
 

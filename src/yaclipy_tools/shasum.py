@@ -1,5 +1,5 @@
 import yaclipy as CLI
-from . import SysTool, ProcTask, OneLine
+from . import SysTool, ProcTask
 
 
 class Shasum(SysTool):
@@ -8,9 +8,9 @@ class Shasum(SysTool):
 
     @classmethod
     async def get_version(self):
-        return await self.proc.using(OneLine(1))('--version')
+        return await self.proc('--version').one()
         
     
     async def hash(self, path):
-        line = await self.using(OneLine(1))(path)
+        line = await self(path).one()
         return line.split(' ')[0]
