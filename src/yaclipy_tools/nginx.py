@@ -1,33 +1,47 @@
 import sys, os, logging
+import yaclipy as CLI
+from print_ext import Printer
 from pathlib import Path
-from .sys_tool import SysTool
+from . import SysTool, OneLine
 from .curl import Curl
-from .config import Config
 
 
 log = logging.getLogger('Nginx-Tool')
 
 
 class Nginx(SysTool):
-
-    cmd = Config.var("An absolute pathname to the nginx command", 'nginx')
-    cert = Config.var("The nginx certificate to use", Path('local/dev.localhost'))
-    
-    @classmethod
-    def version(self):
-        for line in self.__call__(self, '-v', stderr=True):
-            return line.rsplit('/',1)[1]
-
+    cmd = CLI.config_var("An absolute pathname to the nginx command", 'nginx')
+    used_for = CLI.config_var("Why is this required?", "nginx is required.")
+    cert = CLI.config_var("The nginx certificate to use", 'local/dev.localhost', lambda v: Path(v))
 
     @classmethod
-    def install_help(self, t):
-        return t("\v\v $ brew install nginx")
+    async def get_version(self):
+        line = await self.proc.using(OneLine(2))('-v')
+        return line.rsplit('/',1)[1]
+
+
+    @classmethod
+    def init_once(self, *args, **kwargs):
+        curl_args = {k:v for k,v in kwargs.items() if k in ['context']}
+        self.curl = Curl('7', **curl_args)
+        super().init_once(*args, deps=[self.curl.version], **kwargs)
+
+
+    @classmethod
+    def install_help_macos(self, print):
+        print("Install using brew:")
+        print("  $ brew install nginx")
+
+
+    @classmethod
+    def install_help_generic(self, print):
+        print("https://nginx.org/download")
 
 
     def __init__(self, **kwargs):
         self.cfg = dict(workers = 1, domains={}, prefix=Path('local/nginx'), port=80, cert=self.cert())
-        self.config(**kwargs)
-        
+        self.config()
+
 
     def __getitem__(self, k):
         return self.cfg[k]
@@ -79,11 +93,11 @@ class Nginx(SysTool):
         return self
     
 
-    def start(self):
+    async def start(self):
         self['prefix'].mkdir(exist_ok=True)
         mime = self['prefix']/'mime.types'
         if not mime.is_file():
-            Curl(verbose=1).download('https://raw.githubusercontent.com/nginx/nginx/master/conf/mime.types', mime)
+            await self.curl.download('https://raw.githubusercontent.com/nginx/nginx/master/conf/mime.types', mime)
         with (self['prefix']/'nginx.conf').open('w') as f:
             def clean(x, depth=0):
                 for l in x:
@@ -95,9 +109,9 @@ class Nginx(SysTool):
                         yield ' '*4*depth + l + ';\n'
             f.write(''.join(clean(self.cfg_tree)))
         if not self['cert'].is_file():
-            log.warning(f"No certificate file {self['cert']}: https disabled.")
-        self('-c', self['prefix']/'nginx.conf', '-p', os.path.abspath('.'), '-e', self['prefix']/'error.log')
+            Printer(f"No certificate file {self['cert']}: https disabled.", "warn")
+        await self('-c', self['prefix']/'nginx.conf', '-p', os.path.abspath('.'), '-e', self['prefix']/'error.log')
 
 
-    def stop(self):
-        self('-s', 'stop', '-c', self['prefix']/'nginx.conf', '-p', os.path.abspath('.'))
+    async def stop(self):
+        await self('-s', 'stop', '-c', self['prefix']/'nginx.conf', '-p', os.path.abspath('.'))

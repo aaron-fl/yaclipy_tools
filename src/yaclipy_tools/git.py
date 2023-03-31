@@ -1,62 +1,63 @@
-import sys, os, enum
+import sys, os, asyncio
+import yaclipy as CLI
+from print_ext import PrettyException
 from pathlib import Path
-from .sys_tool import SysTool
-from .config import Config
+from . import SysTool, OneLine, Watch, Lines
+
+
+class GitRepoError(PrettyException):
+    def __pretty__(self, print, **kwargs):
+        print(f"\berr {self.repo}\b  is not a git repository")
+    
+    @staticmethod
+    async def check(tool):
+        if not tool.repo: return
+        line = await tool.proc.using(OneLine(1))('-C', tool.repo, 'config', '--get', 'remote.origin.url', success=True)
+        if not line:
+            line = await tool.proc.using(OneLine(1))('-C', tool.repo, 'rev-parse','--show-toplevel')
+        return os.path.splitext(os.path.basename(line))[0]
+
 
 
 class Git(SysTool):
-    cmd = Config.var("An absolute pathname to the git command", 'git')
+    cmd = CLI.config_var("An absolute pathname to the git command", 'git')
+    used_for = CLI.config_var("Why is this required?", "git is required.")
+
 
     @classmethod
-    def version(self):
-        for line in super().__call__(self, '--version', stdout=True):
-            return line.split(' ')[2]
+    async def get_version(self):
+        line = await self.proc.using(OneLine(1))('--version')
+        return line.split(' ')[2]
 
 
-    def __init__(self, repo='.', **kwargs):
-        self.repo = Path(repo)
-        super().__init__(**kwargs)
-
-
-    def __bool__(self):
-        return bool(self.name)
-
-
-    def __call__(self, *args, **kwargs):
-        return super().__call__('-C', self.repo, *args, **kwargs)
-
-
-    @property
-    def name(self):
-        ''' The name of the repo based on either the remote name or the local name.
-        '''
-        if not hasattr(self, '_name'):
-            l = list(self('config', '--get', 'remote.origin.url', stdout=True, msg=f'{self.repo}: Origin', or_else=['']))[0]
-            if not l:
-                l = list(self('rev-parse','--show-toplevel', stdout=True, msg=f'{self.repo}: Name', or_else=['']))[0]
-            self._name = os.path.splitext(os.path.basename(l))[0]
-        return self._name
-
+    @classmethod
+    def init_once(self, version=0, repo='.', **kwargs):
+        self.repo = repo
+        self.name = asyncio.create_task(GitRepoError.check(self))
+        super().init_once(version, deps=[self.name], **kwargs)
+        if self.repo:
+            self.proc_verified = self.proc_verified('-C', repo)
+    
 
     def current_commit(self):
         ''' The current commit hash
         '''
-        return list(self('rev-parse','HEAD', msg=f'{self.repo}: Current commit', stdout=True))[0]
+        return self.using(OneLine(1))('rev-parse','HEAD')
 
 
-    def status(self, *args, changes_only=False):
+    async def status(self, *args, changes_only=False):
         ''' A list of changes [(code, file)]
 
         Parameters:
             changes_only <bool> [False]
                 If False, then check if we need to push `: ` or pull `; `
         '''
-        changes = [x for x in self('status', '-z', *args, stdout='raw', msg=f'{self.repo}: Status').decode('utf8').split('\0') if x]
-        changes = [(k[:2],Path(k[3:])) for k in changes]
+        changes = await self.using(Lines(end='\0'))('status', '-z', *args)
+        changes = [(k[:2],Path(k[3:])) for k in changes if k]
         if changes or changes_only: return changes
-        if list(self('fetch', '--dry-run', stdout=True, msg=f'{self.repo}: Check pull')):
+        if await self.using(OneLine(1))('fetch', '--dry-run'):
             return [('; ','Need to pull')]
-        if list(self('status', '-sb', stdout=True, msg=f'{self.repo}: Check push'))[0].split('[')[-1].startswith('ahead'):
+        if await self.using(OneLine(1))('status', '-sb').split('[')[-1].startswith('ahead'):
             return [(': ','Need to push')] 
         return []
 
@@ -64,24 +65,27 @@ class Git(SysTool):
     def current_branch(self):
         ''' The name of the current branch.
         '''
-        return list(self('symbolic-ref', '--short', 'HEAD', stdout=True, msg=f'{self.repo}: Branch'))[0]
+        return self.using(OneLine(1))('symbolic-ref', '--short', 'HEAD')
 
 
-    def up_to_date(self):
+    async def up_to_date(self):
         ''' Check `status()` to see if we are up-to-date.
         '''
-        return not bool(self.status())
+        return not bool(await self.status())
 
 
-    def list(self, *pattern, invert=False):
+    async def list(self, *pattern, invert=False):
         ''' An iterator using `ls-files` to list files based on .gitignore rules.
         '''
-        for p in self('ls-files', *pattern, *(['--other'] if invert else []), stdout=True, msg=f'{self.repo}: List'):
-            yield Path(p)
+        proc = self.using(Watch(1))('ls-files', *pattern, *(['--other'] if invert else []))
+        proc.start()
+        with proc.mio[1].reader() as read:
+            async for line in read.each_line():
+                yield Path(line)
 
 
 
-def rebase_ff(base, ontop, *, repo='.', verbose__v=False):
+async def rebase_ff(base, ontop, *, repo='.', verbose__v=False):
     ''' Rebase and then ff merge.  New commits from `ontop` will be applied to `base`.
 
     Parameters:
@@ -95,6 +99,6 @@ def rebase_ff(base, ontop, *, repo='.', verbose__v=False):
             Use up to three -vvv for lots of verbosity.
     '''
     git = Git(repo=repo, verbose=int(verbose__v))
-    git('rebase', base, ontop)
-    git('switch', base)
-    git('merge', '--ff-only', ontop)
+    await git('rebase', base, ontop)
+    await git('switch', base)
+    await git('merge', '--ff-only', ontop)

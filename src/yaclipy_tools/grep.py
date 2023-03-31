@@ -1,14 +1,15 @@
 import logging, re
+import yaclipy as CLI
 from print_ext import Table, Printer, Line
 from collections import namedtuple
-from .sys_tool import SysTool
-from .config import Config
+from . import SysTool, OneLine
 from subprocess import Popen, PIPE, DEVNULL
 
 log = logging.getLogger('Grep-Tool')
 
 
-grep_groups = Config.var(''' A dictionary of project locations that will be grepped with the grep command.
+grep_groups = CLI.config_var(''' A dictionary of project locations that will be grepped with the grep command.
+
     {
         'Python Files': [
             (None, 'file1.py', 'file2.py'),
@@ -19,8 +20,6 @@ grep_groups = Config.var(''' A dictionary of project locations that will be grep
             ('*', '*/docs/*', '*. '*/.dist/*'),
         ],
     }
-
-
 ''', {'':[('*', '.', '*/__pycache__/*', '*/node_modules/*', 'local/*')]})
 
 
@@ -37,12 +36,13 @@ class GroupMatch(dict):
         self.re = re.compile(pattern, flags=0 if case else re.IGNORECASE) if pattern else None
         super().__init__({k:[FileMatch.from_str(line) for line in v.splitlines()] for k,v in groups.items()})
 
-    def pretty(self, **kwargs):
-        p = Printer()
-        if not(self): return p('\bwarn No matches')
+
+    def __pretty__(self, print, **kwargs):
+        if not(self):
+            print('\bwarn No matches')
+            return
         for title, files in self.items():
-            
-            tbl = Table(0,1,tmpl='')
+            tbl = Table(0,1, tmpl='')
             tbl.cell('c0', just='>')
             fn = ''
             for f in files:
@@ -63,25 +63,26 @@ class GroupMatch(dict):
                 tbl(f"\b{'1' if fn!=f.fname else 'w.;'} {f.fname}\bw.; :\b2 {f.lno} \t", line,'\t')
                 fn = f.fname
             if tbl:
-                p.hr(title, style='em', pad=1)
-                p(tbl,pad=1)
-        return p
+                print.hr(title, style='em')
+                print(tbl)
 
 
 
 class Grep(SysTool):
-    cmd = Config.var("An absolute pathname to the grep command", 'grep')
+    cmd = CLI.config_var("An absolute pathname to the grep command", 'grep')
+    needed_because = CLI.config_var("Why is this required?", "grep is required.")
+
 
     @classmethod
-    def version(self):
-        for line in self.__call__(self, '--version', stdout=True):
-            return line.rsplit(' ',1)[1].split('-')[0]
+    async def get_version(self):
+        line = await self.proc.using(OneLine(1))('--version')
+        return line.rsplit(' ',1)[1].split('-')[0]
     
 
     def files_search(self, files, pattern, *args):
         if not files: return ''
         cmd = ['--color=never'] + list(args) + [pattern] + files
-        return self(*cmd, stdout=True)
+        return self(*cmd)
 
 
     def group_search(self, groups, pattern, *args):
@@ -105,7 +106,7 @@ class Grep(SysTool):
 
 
 
-def grep(pattern, /, *, case__c=False) -> GroupMatch:
+async def grep(pattern, /, *, case__c=False) -> GroupMatch:
     ''' Grep all relevant files (and filenames) in the project for regex <pattern>
 
     Parameters:
@@ -116,4 +117,5 @@ def grep(pattern, /, *, case__c=False) -> GroupMatch:
     '''
     args = ['-n', '--color=never']
     if not case__c: args += ['-i']
-    return GroupMatch(Grep().group_search(grep_groups(), pattern, *args), pattern, case__c)
+    data = Grep().group_search(grep_groups(), pattern, *args)
+    return GroupMatch(data, pattern, case__c)

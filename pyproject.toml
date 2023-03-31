@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "yaclipy-tools"
-description = 'This is a collection of wrappers around common system tools that works well with yaclipy.'
+description = 'An extensible, asyncio interface to subprocesses, plus a set of wrappers around common system tools that works well with yaclipy'
 readme = "README.md"
 requires-python = ">=3.7"
 license = "MIT"
@@ -13,6 +13,7 @@ authors = [
   { name = "Aaron", email = "aaron@framelunch.jp" },
 ]
 classifiers = [
+  "Natural Language :: English",
   "Development Status :: 4 - Beta",
   "Programming Language :: Python",
   "Programming Language :: Python :: 3.7",
@@ -22,14 +23,19 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: Implementation :: CPython",
   "Programming Language :: Python :: Implementation :: PyPy",
+  "Environment :: Console",
+  "Framework :: AsyncIO",
+  "Intended Audience :: Developers",
+  "Topic :: Software Development :: Build Tools", 
+  "Topic :: Software Development",
 ]
-dependencies = ["yaclipy>=0.7.3", "print-ext>=0.13.1"]
+dependencies = ["yaclipy>=1.1.1", "print-ext>=2.1.1"]
 dynamic = ["version"]
 
 [project.urls]
-Documentation = "https://github.com/unknown/yaclipy-tools#readme"
-Issues = "https://github.com/unknown/yaclipy-tools/issues"
-Source = "https://github.com/unknown/yaclipy-tools"
+Documentation = "https://github.com/aaron-fl/yaclipy_tools#readme"
+Issues = "https://github.com/aaron-fl/yaclipy_tools/issues"
+Source = "https://github.com/aaron-fl/yaclipy_tools"
 
 [tool.hatch.version]
 path = "src/yaclipy_tools/__about__.py"
@@ -38,6 +44,7 @@ path = "src/yaclipy_tools/__about__.py"
 dependencies = [
   "pytest",
   "pytest-cov",
+  "pytest-asyncio",
 ]
 [tool.hatch.envs.default.scripts]
 cov = "pytest --cov-report=term-missing --cov-config=pyproject.toml --cov=src/yaclipy_tools --cov=tests"
@@ -68,3 +75,7 @@ exclude = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/yaclipy_tools"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+addopts = "--doctest-modules --ignore=local --ignore=examples --ignore=src --basetemp=local/pytest_tmp"

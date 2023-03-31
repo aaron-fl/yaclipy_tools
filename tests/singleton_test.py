@@ -8,10 +8,12 @@ class ClsB(ClsA): pass
 
 class ClsC(metaclass=Singleton):
     @classmethod
-    def init_once(self, *args):
+    def init_once(self, *args, **kwargs):
+        print(f"init_once {args} {kwargs}")
         self.args = args
     
     def __init__(self, **kwargs):
+        print(f"__init__ {kwargs}")
         self.kwargs = kwargs
 
 
@@ -36,3 +38,13 @@ def test_singleton_2():
     assert(id(c2.kwargs) != id(c1.kwargs))
     
 
+
+def test_singleton_kwargs():
+    class A(metaclass=Singleton):
+        @classmethod
+        def init_once(self, *args, **kwargs):
+            assert(kwargs == {'a':3})
+        def __init__(self, *args, **kwargs):
+            pass
+
+    A(3,3,a=3)

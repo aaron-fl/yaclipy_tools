@@ -1,19 +1,22 @@
-from print_ext import print
-from yaclipy_tools.sys_tool import MissingTool
-from yaclipy_tools.curl import Curl
+import pytest
+from yaclipy_tools.all import Curl
+from .testutil import get_tool
 
 
-def _curl():
-    try:
-        return Curl('7', verbose=4)
-    except MissingTool as e:
-        print.pretty(e)
-        pytest.skip("curl not installed")
+@pytest.mark.asyncio
+async def test_curl_download_lines():
+    curl = await get_tool(Curl('7'))
+    v = await curl.download('https://raw.githubusercontent.com/nginx/nginx/master/conf/mime.types')
+    print(v)
+    assert('types {' in v)
 
 
-def test_curl_download():
-    curl = _curl()
-    lines = list(curl.download('https://raw.githubusercontent.com/nginx/nginx/master/conf/mime.types'))
-    assert('types {' in lines)
 
-    
+@pytest.mark.asyncio
+async def test_curl_download_file(tmp_path):
+    curl = await get_tool(Curl('7'))
+    await curl.download('https://raw.githubusercontent.com/nginx/nginx/master/conf/mime.types', path=tmp_path/'mime.types')
+    with open(tmp_path/'mime.types') as f:
+        all = f.read()
+        print(all)
+        assert('types {' in all)

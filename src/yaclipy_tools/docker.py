@@ -1,24 +1,32 @@
+import json, asyncio
+import yaclipy as CLI
 from print_ext import PrettyException
-from .sys_tool import SysTool
-from .config import Config
+from . import SysTool, OneLine, Lines
 
-class DockerNotRunning(PrettyException): pass
 
-class Docker(SysTool):
-    cmd = Config.var("An absolute pathname to the docker command", 'docker')
-
-    @classmethod
-    def version(self):
-        for line in self.__call__(self, '--version', stdout=True):
-            return line.split(',')[0].split(' ')[2]
-        
-    @classmethod
-    def init_once(self, *args):
-        super().init_once(*args)
+class DockerNotRunning(PrettyException):
+    @staticmethod
+    async def check(tool):
         try:
-            self.__call__(self, 'images', '-q')
+            await tool.proc('images', '-q')
         except:
             raise DockerNotRunning(msg=f"The Docker demon is not running.  \berr Start docker desktop\b  and try again.")
+
+
+class Docker(SysTool):
+    cmd = CLI.config_var("An absolute pathname to the docker command", 'docker')
+    used_for = CLI.config_var("Why is this required?", "docker is required.")
+    
+    @classmethod
+    async def get_version(self):
+        line = await self.proc.using(OneLine(1))('--version')
+        return line.split(',')[0].split(' ')[2]
+
+
+    @classmethod
+    def init_once(self, *args, **kwargs):
+        check_task = asyncio.create_task(DockerNotRunning.check(self))
+        super().init_once(*args, deps=[check_task], **kwargs)
 
 
     def image_id(self, image):
@@ -28,7 +36,10 @@ class Docker(SysTool):
             <docker_image>
                 The docker image name
         '''
-        imgs = list(self('images', '-q', image, stdout=True))
-        if not imgs: return None
-        assert(len(imgs) == 1), f"Multiple images {imgs}"
-        return imgs[0]
+        return self.using(OneLine(1))('images', '-q', image)
+
+
+    async def containers(self):
+        ''' Get a list of all the containers.
+        '''
+        return [json.loads(line) for line in await self.using(Lines(1))('container', 'ls', '-a', '--format', '{{json .}}')]

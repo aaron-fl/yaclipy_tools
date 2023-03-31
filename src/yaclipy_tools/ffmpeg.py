@@ -1,38 +1,45 @@
 import sys, os, re
-from .sys_tool import SysTool
-from .config import Config
+import yaclipy as CLI
+from . import SysTool, Lines, OneLine
 
 
 class FFmpeg(SysTool):
-    cmd = Config.var("An absolute pathname to the ffmpeg command", 'ffmpeg')
+    cmd = CLI.config_var("An absolute pathname to the ffmpeg command", 'ffmpeg')
+    used_for = CLI.config_var("Why is this required?", "ffmpeg is required.")
 
     @classmethod
-    def version(self):
-        for line in self.__call__(self, '-version', stdout=True):
-            return line.split(' ')[2]
+    async def get_version(self):
+        line = await self.proc.using(OneLine(1))('-version')
+        return line.split(' ')[2]
 
 
     @classmethod
-    def init_once(self, *args):
+    def init_once(self, *args, **kwargs):
         self.DUR_RE = re.compile(r"Duration: (\d\d):(\d\d):([0-9.]+),")
         self.VID_RE = re.compile(r"Stream #(\d:\d)\((.*?)\): Video:(.*)")
         self.SIZE_RE = re.compile(r'(\d+)x(\d+).*')
         self.AUDIO_RE = re.compile(r"Stream #(\d:\d).*? Audio:\s*(\w*).*?(\d+) Hz.*?(\d+) kb/s")
-        super().init_once(*args)
+        super().init_once(*args, **kwargs)
 
 
     @classmethod
-    def install_help(self, p):
-        return p("$ brew install ffmpeg", pad=-1)
+    def install_help_macos(self, print):
+        print("Install using brew:")
+        print("  $ brew install ffmpeg")
+
+
+    @classmethod
+    def install_help_generic(self, print):
+        print("https://ffmpeg.org/download.html")
 
 
     def process(self, infile, outfile, *args, **kwargs):
         return self('-y', '-i', infile, *args, outfile, **kwargs)
 
 
-    def info(self, infile, *args, **kwargs):
+    async def info(self, infile, *args, **kwargs):
         info = {}
-        for line in self('-i', infile, '-hide_banner', success=[0,1], stderr=True):
+        for line in await self.using(Lines(2))('-i', infile, '-hide_banner', success=[0,1]):
             if 'no such file' in line.lower(): return None
             if m:=self.DUR_RE.search(line):
                 info['dur'] = int(m[1])*3600 + int(m[2])*60 + float(m[3])

@@ -1,5 +1,8 @@
-from yaclipy_tools.md5 import Md5
+import pytest
+from yaclipy_tools.all import Md5
+from .testutil import get_tool
 
-def test_md5():
-    md5 = Md5()
-    assert(md5.hash('tests/echo.py') == '4200d5caa042d2ab5ea4924ef03495cb')
+@pytest.mark.asyncio
+async def test_md5():
+    md5 = await get_tool(Md5())
+    assert(await md5.hash('tests/echo.py') == 'd0130dc0b9073e42b5211ad2c10130d9')

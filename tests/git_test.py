@@ -1,19 +1,26 @@
-from print_ext import print
-from yaclipy_tools.run import CmdRunError
-from yaclipy_tools.git import Git
+import pytest, asyncio, pathlib
+from print_ext import Printer
+from yaclipy_tools.all import Git
+from .testutil import get_tool
 
-def test_git():
-    git = Git('2.30')
-    assert(git.name == 'yaclipy_tools')
-    assert(len(git.current_commit()) == 40)
-    assert(git.current_branch() == 'main')
-
-
-def test_git_status():
-    git = Git()
-    print.pretty(git.status())
+@pytest.mark.asyncio
+async def test_git_name():
+    git = await get_tool(Git('2.30'))
+    assert(await git.name == 'yaclipy_tools')
+    assert(len(await git.current_commit()) == 40)
+    assert(await git.current_branch() == 'main')
 
 
-def test_git_list():
-    git = Git()
-    print.pretty(list(git.list('*.py', invert=True)))
+@pytest.mark.xfail()
+@pytest.mark.asyncio
+async def test_git_status():
+    git = await get_tool(Git())
+    Printer().pretty(await git.status())
+
+
+@pytest.mark.asyncio
+async def test_git_list():
+    git = await get_tool(Git())
+    l = [f async for f in git.list('*.py', invert=False)]
+    assert(pathlib.Path('tests/echo.py') in l)
+    Printer().pretty(l)

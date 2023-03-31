@@ -1,32 +1,39 @@
 import os, re
+import yaclipy as CLI
 from print_ext import PrettyException
-from .sys_tool import SysTool
-from .config import Config
+from . import OneLine, SysTool, Echo
 
 
 class CertificateExists(PrettyException): pass
 
 
 class OpenSSL(SysTool):
-
-    cmd = Config.var("An absolute pathname to the openssl command", 'openssl')
-
-    @classmethod
-    def version(self):
-        for line in self.__call__(self, 'version', '-v', stdout=True):
-            return line.split(' ')[1]
+    cmd = CLI.config_var("An absolute pathname to the openssl command", 'openssl')
+    used_for = CLI.config_var("Why is this required?", "openssl is required.")
 
     @classmethod
-    def install_help(self, t):
-        return t("\v\v $ brew install openssl")
-
-    
-    def cert_inspect(self, prefix, mode='-subject'):
-        for line in self('x509', '-in', str(prefix)+'.pem', mode, '-noout', stdout=True, msg="Inspect Certificate"):
-            return {a[0]:a[1] for a in [arg.split(' = ',1) for arg in line[len(mode):].split(', ')]}
+    async def get_version(self):
+        line = await self.proc.using(OneLine(1))('version', '-v')
+        return line.split(' ')[1]
 
 
-    def cert(self, *, prefix, cn, ca, san=[], client=False, force=False, askpass=False, days=365):
+    @classmethod
+    def install_help_macos(self, print):
+        print("Install using brew:")
+        print("  $ brew install openssl")
+
+
+    @classmethod
+    def install_help_generic(self, print):
+        print("https://www.openssl.org/source/")
+
+
+    async def cert_inspect(self, prefix, mode='-subject'):
+        line = await self.using(OneLine(1))('x509', '-in', str(prefix)+'.pem', mode, '-noout')
+        return {a[0]:a[1] for a in [arg.split(' = ',1) for arg in line[len(mode):].split(', ')]}
+
+
+    async def cert(self, *, prefix, cn, ca, san=[], client=False, force=False, askpass=False, days=365):
         prefix = str(prefix)
         if not force and os.path.exists(prefix+'.pem'):
             self.cert_show(prefix, '-text')
@@ -57,22 +64,21 @@ class OpenSSL(SysTool):
         if sancn:
             cmd += ['-addext', f'subjectAltName={sancn}']
         
-        self(*cmd, msg=f"Openssl Certificate: {prefix!r}  ca:{ca}  cn:{cn}  san:{san}")
-        return self.cert_inspect(prefix)
+        await self(*cmd)
+        return await self.cert_inspect(prefix)
 
 
-    def rsa(self, *, path, format):
+    def rsa(self, *, path):
         self('genrsa', '-traditional', '-out', path)
 
 
-    def rand(self, *, fname=None, bytes=32):
-        if fname:
-            self('rand', '-hex', '-out', str(fname), str(bytes))
+    async def rand(self, *, path=None, bytes=32):
+        if path:
+            await self('rand', '-hex', '-out', path, bytes)
         else:
-            for line in self('rand','-hex', bytes, stdout=True):
-                return line.rstrip()
+            return await self.using(OneLine(1))('rand','-hex', bytes)
         
 
-    def hash(self, fname):
-        for line in self('dgst', '-sha256', '-hex', '-r', fname, stdout=True, msg=f"Calculate file hash of '{fname}'", or_else=['']):
-            return line.split(' ',1)[0]
+    async def hash(self, path):
+        line = await self.using(OneLine(1))('dgst', '-sha256', '-hex', '-r', path, or_else=None)
+        return '' if line == None else line.split(' ',1)[0]

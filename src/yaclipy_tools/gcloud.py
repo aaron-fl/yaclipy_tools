@@ -1,6 +1,7 @@
-from .sys_tool import SysTool
-from .config import Config
 from print_ext import PrettyException, Printer
+import yaclipy as CLI
+from . import SysTool, OneLine, Lines
+
 
 def parse_version(lines, version):
     for line in lines:
@@ -11,36 +12,39 @@ def parse_version(lines, version):
     return ''
 
 
-class GCloudProjectSet(PrettyException):
-    def pretty(self, **kwargs):
-        p = Printer()
-        p(f"gcloud is currently configured for gcp project \berr {self.cur_project}")
-        p(f"Use `\b2 gcloud init\b ` or `\b2 gcloud config configurations activate\b ` to change the project to \b1 {self.want_project}", pad=1)
-        p(self.config_list)
-        return p
+
+class GCloudProjectError(PrettyException):
+    def __pretty__(self, print, **kwargs):
+        print(f"gcloud is currently configured for gcp project \berr {self.cur_project}")
+        print(f"Use `\b2 gcloud init\b ` or `\b2 gcloud config configurations activate\b ` to change the project to \b1 {self.want_project}", pad=1)
+        for line in self.config_list:
+            print(line)
+
+
+    @staticmethod
+    async def check(tool, want):
+        line = await tool.proc.using(OneLine(1))('config', 'get-value', 'project')
+        cur = line.strip()
+        config_list = await tool.proc.using(Lines(1))('config', 'configurations', 'list')
+        if cur != want:
+            raise GCloudProjectError(cur_project=cur, want_project=want, config_list=config_list)
 
 
 
 class GCloud(SysTool):
-    cmd = Config.var("An absolute pathname to the gcloud command", 'gcloud')
+    cmd = CLI.config_var("An absolute pathname to the gcloud command", 'gcloud')
+    used_for = CLI.config_var("Why is this required?", "gcloud is required.")
+    
+    @classmethod
+    async def get_version(self):
+        line = await self.proc.using(OneLine(1))('--version')
+        return line.split(' ')[-1]
+            
 
     @classmethod
-    def version(self):
-        for line in self.__call__(self, '--version', stdout=True):
-            return line.split(' ')[-1]
-
-
-    @classmethod
-    def init_once(self, project_name='', version='0'):
-        super().init_once(version)
-        if not project_name: return
-        # Verify the project_name
-        for line in self.__call__(self, 'config', 'get-value', 'project', stdout=True):
-            cur_project = line.strip()
-            config_list = self.__call__(self, 'config', 'configurations', 'list', stdout='raw').decode('utf8')
-            if cur_project != project_name:
-                raise GCloudProjectSet(cur_project=cur_project, want_project=project_name, config_list=config_list)
-            return
+    def init_once(self, version=0, project='', **kwargs):
+        deps = [GCloudProjectError.check(self, project)] if project else []
+        super().init_once(version, deps=deps, **kwargs)
 
 
     def k8s_credentials(self, *, region, cluster_name):
@@ -52,4 +56,4 @@ class GCloud(SysTool):
             cluster_name <str>
                 The name of the cluster
         '''
-        self('container','clusters','get-credentials','--region', region, cluster_name)
+        return self('container', 'clusters', 'get-credentials', '--region', region, cluster_name)

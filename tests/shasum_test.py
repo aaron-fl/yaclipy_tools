@@ -1,12 +1,9 @@
-from print_ext import print
-from yaclipy_tools.shasum import Shasum
-from yaclipy_tools.sys_tool import MissingTool
+import pytest
+from yaclipy_tools.all import Shasum
+from .testutil import get_tool
 
-def test_Shasum():
-    try:
-        sha = Shasum('11')
-        assert(False)
-    except MissingTool as e: 
-        print.pretty(e)
-    sha = Shasum('6')
-    assert(sha.hash('tests/echo.py') == '0330b869605febca1969554eeb9002c84a1148c7')
+
+@pytest.mark.asyncio
+async def test_Shasum():    
+    sha = await get_tool(Shasum('6'))
+    assert(await sha.hash('tests/echo.py') == 'a2dce0d96742f159a875e4fc24c3966e7f836425')

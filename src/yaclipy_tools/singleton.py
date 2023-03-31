@@ -12,14 +12,15 @@ class Singleton(type):
         except KeyError:
             cls_inst = SingletonInstance(name, (base,), {})
             base._instances[name] = cls_inst
-            cls_inst.init_once(*args)
+            cls_inst.init_once(*args, **kwargs)
         return cls_inst(**kwargs)
-    
+
 
 
 class SingletonInstance(Singleton):
     def __call__(self, *args, **kwargs): # override Singleton's __call__ to prevent recursion
         return super(Singleton, self).__call__(*args, **kwargs)
 
-    def init_once(self, *args):
+    def init_once(self, *args, **kwargs):
         pass
+

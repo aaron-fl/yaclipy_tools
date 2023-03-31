@@ -1,16 +1,16 @@
-from .sys_tool import SysTool
-from .config import Config
+import yaclipy as CLI
+from . import SysTool, ProcTask, OneLine
 
 
 class Shasum(SysTool):
-    cmd = Config.var("An absolute pathname to the shasum command", 'shasum')
+    cmd = CLI.config_var("An absolute pathname to the shasum command", 'shasum')
+    used_for = CLI.config_var("Why is this required?", "shasum is required.")
 
     @classmethod
-    def version(self):
-        for line in self.__call__(self, '--version', stdout=True):
-            return line
+    async def get_version(self):
+        return await self.proc.using(OneLine(1))('--version')
         
-        
-    def hash(self, file):
-        for line in self(file, stdout=True):
-            return line.split(' ')[0]
+    
+    async def hash(self, path):
+        line = await self.using(OneLine(1))(path)
+        return line.split(' ')[0]

@@ -1,16 +1,16 @@
-from print_ext import print
-from yaclipy_tools.sys_tool import MissingTool
-from yaclipy_tools.grep import Grep, grep, grep_groups
+import pytest
+from print_ext import Printer
+from yaclipy_tools.all import Grep
+from yaclipy_tools.commands import grep, grep_groups
+from .testutil import get_tool
 
 
-
-def test_grep_source():
+@pytest.mark.asyncio
+async def test_grep_source():
+    g = await get_tool(Grep())
     grep_groups(dict(gg=[(None, 'tests/grep_test.py', 'tests/echo.py')]))
-    results = grep('none') # More NONEnone
-    print.pretty(results)
+    results = await grep('none') # More NONEnone
+    Printer().pretty(results)
     assert(len(results['gg']) == 2)
     assert(results['gg'][0].fname == 'tests/grep_test.py')
     
-
-if __name__ == '__main__':
-    test_grep_source()

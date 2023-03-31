@@ -1,15 +1,17 @@
-from .sys_tool import SysTool
-from .config import Config
-from .run import run, CmdNotFound
+import yaclipy as CLI
+from . import SysTool, OneLine
 
 
 class Md5(SysTool):
-    cmd = Config.var("An absolute pathname to the md5 command", 'md5')
+    cmd = CLI.config_var("An absolute pathname to the md5 command", 'md5')
+    used_for = CLI.config_var("Why is this required?", "md5 is required.")
+
 
     @classmethod
-    def version(self):
-        return str(self.__call__(self, '-x', or_else=''))
+    async def get_version(self):
+        return str(await self.proc('-x', or_else=''))
 
-    def hash(self, file):
-        for line in self(file, stdout=True):
-            return line.split(' ')[-1]
+
+    async def hash(self, file):
+        line = await self.using(OneLine(1))(file)
+        return line.split(' ')[-1]

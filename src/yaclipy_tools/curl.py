@@ -1,26 +1,31 @@
-from .sys_tool import SysTool
-from .config import Config
+import yaclipy as CLI
+from . import SysTool, OneLine, Echo, Lines
 
 
 class Curl(SysTool):
-    cmd = Config.var("An absolute pathname to the curl command", 'curl')
+    cmd = CLI.config_var("An absolute pathname to the curl command", 'curl')
+    used_for = CLI.config_var("Why is this required?", "curl is required.")
+
 
     @classmethod
-    def version(self):
-        for line in self.__call__(self, '--version', stdout=True):
-            return line.split(' ')[1]
+    async def get_version(self):
+        line = await self.proc.using(OneLine(1))('--version')
+        return line.split(' ')[1]
 
 
-    def download(self, url, fname=None):
+    def download(self, url, path=None, **kwargs):
         ''' Download a file.
 
         Parameters:
             <url>
                 The url to download
-            <path>, fname<path> [None]
+            <path>, path=<path> | default=None
                 Save the file here.  Otherwise, if fname is None, yield each downloaded line.
+            encoding=<str> | default='utf8'
+                If you are not downloading to a file then this specifies the format of the returned data.
+                Specify encoding=None for binary data.
         '''
-        if fname:
-            self(url, '-o', fname)
+        if path:
+            return self(url, '-o', path)
         else:
-            return self(url, stdout=True)
+            return self.using(Lines(1))(url)

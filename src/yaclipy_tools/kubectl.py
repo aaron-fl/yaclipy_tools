@@ -1,5 +1,5 @@
+import yaclipy as CLI
 from .sys_tool import SysTool
-from .config import Config
 
 
 def _parse_version(lines, version):
@@ -12,25 +12,30 @@ def _parse_version(lines, version):
 
 
 class Kubectl(SysTool):
-    cmd = Config.var("An absolute pathname to the kubectl command", 'kubectl')
+    cmd = CLI.config_var("An absolute pathname to the kubectl command", 'kubectl')
+    used_for = CLI.config_var("Why is this required?", "kubectl is required.")
 
     @classmethod
-    def version(self):
-        return _parse_version(self.__call__(self, 'version', stdout=True), 'client')
+    async def get_version(self):
+        return _parse_version(await self.proc.using(Lines(1))('version'), 'client')
 
 
-    def server_version(self):
+    async def server_version(self):
         ''' The version of the kubernetes cluster
         '''
-        return _parse_version(self('version', stdout=True), 'server')
+        return _parse_version(await self.using(Lines(1))('version'), 'server')
 
     
-    def apply(self, filename):
+    def apply(self, data_or_path):
         ''' Apply the yaml file.
 
         Parameters:
             <path>
-                A yaml file to apply
+                A path to a yaml file, or a dictionary of data
         '''
-        return self('apply', '-f', filename)
-        
+        if isinstance(data_or_path, dict):
+            path = f'local/kube_apply_{hex(abs(hash(data_or_path)))}.yaml'
+            with open() as f:
+                yaml.dump(data_or_path, f)
+            data_or_path = path
+        return self('apply', '-f', data_or_path)
